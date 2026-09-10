@@ -1,22 +1,17 @@
-# Beyond The Dollar
+# Beyond The Dollar — 3D Prototype
 
-**Beyond The Dollar** is a nonprofit designed to help teenagers (~14–18) understand
-financial life in an engaging way. This repository contains the web app: a **premium
-interactive financial-life simulator** set in the fictional city of *Merridian*.
+**Beyond The Dollar** is a nonprofit helping teenagers understand financial life in an
+engaging way. This repository contains a **playable third-person 3D web prototype**:
+a real, explorable city block (the city of *Merridian*) where you walk around, enter
+buildings, talk to NPCs, make choices, and see financial consequences.
 
-It is a life simulator centered on financial decisions — not a course, quiz app, or
-spreadsheet. The player lives a life, and the choices they make (housing, work,
-education, transport, spending, saving, investing, credit, debt, emergencies, and
-opportunities) teach how money really works.
-
-Core loop: **Live → Explore → Encounter → Understand → Decide → Experience →
-Consequence → Adapt → Progress.**
+It is a true 3D world — not a dashboard, 2D game, or menu.
 
 ## Tech stack
 
 - [Vite](https://vitejs.dev/) + [React 18](https://react.dev/) + TypeScript
-- [React Router](https://reactrouter.com/) (HashRouter) for navigation
-- Custom SVG charts (no chart dependency); state persisted to `localStorage`
+- [Three.js](https://threejs.org/) via [React Three Fiber](https://docs.pmnd.rs/react-three-fiber) + [@react-three/drei](https://github.com/pmndrs/drei)
+- [zustand](https://github.com/pmndrs/zustand) for centralized game state
 - ESLint for linting
 
 ## Getting started
@@ -28,6 +23,33 @@ npm install      # install dependencies
 npm run dev      # start the dev server at http://localhost:5173
 ```
 
+## Controls
+
+- **Click** the scene to capture the mouse (look around)
+- **WASD** — move · **Mouse** — rotate the third-person camera
+- **E** — interact (enter buildings, talk to NPCs, add groceries, checkout)
+- **ESC** — close a dialogue / release the mouse
+
+## What's in the prototype
+
+- **One polished city block** — roads, sidewalks, road markings, parked cars,
+  streetlights, trees, and NPC pedestrians.
+- **Five buildings with clear signs** — Home (Maple Apartments), FirstCity Bank,
+  Merridian College, FreshMart Grocery, and Summit Office. Bank, Grocery, College,
+  and Office are enterable (press **E** at the door; quick fade transition).
+- **Real 3D interiors** with furniture and staff NPCs (teller, counselor, manager,
+  cashier).
+- **Third-person humanoid** avatar that stands, walks, faces its movement direction,
+  and stops on release.
+- **Collision** so you can't walk through buildings/walls or leave the block.
+- **Reusable interaction + dialogue systems** (proximity prompt, bottom dialogue UI).
+- **Grocery shopping** — add items to a cart and pay at checkout (cash updates live).
+- **Workplace job** — apply to become an Office Assistant ($16/hr, 15 hrs/week).
+- **Bank & College** interactions (savings, deposits, credit info, majors, tuition,
+  scholarships).
+- **A life event** — after a short time a $700 car repair appears with three outcomes.
+- **Minimal HUD** (cash, bank, location) and a **minimap** (no teleporting).
+
 ## Available scripts
 
 | Script              | Description                                     |
@@ -38,39 +60,27 @@ npm run dev      # start the dev server at http://localhost:5173
 | `npm run lint`      | Run ESLint.                                     |
 | `npm run typecheck` | Type-check the project without emitting output. |
 
-## How it works
-
-- **Onboarding** — Welcome → Character Creation → Life Setup (choose a life stage).
-- **City of Merridian** — explore five districts (Downtown, Residential, Education,
-  Commercial, Civic/Health) and enter buildings to make decisions.
-- **Month loop** — the top bar's *Advance Month* processes income, taxes, rent,
-  transport, living costs, debt interest/payments, and investment growth, then may
-  surface a life encounter.
-- **Encounters** — `STORY → INFORMATION → DECISION → CONSEQUENCE`. Knowing a concept
-  highlights the "smart move" and can unlock better options.
-- **Progression** — Financial XP, Life Skills, Challenges, Achievements, an
-  XP-based Leaderboard, a Life Timeline, and **What-If mode** comparing life paths.
-- **Recovery, not Game Over** — a financial crisis triggers a supportive recovery
-  flow instead of ending the game.
-
-## Project structure
+## Architecture
 
 ```
 src/
-├── game/            # types, finance engine, content, events, state store
-│   ├── engine.ts    # taxes, credit score, compounding, financial health
-│   ├── content.ts   # city, jobs, housing, transport, concepts, challenges…
-│   ├── events.ts    # STORY→INFO→DECISION→CONSEQUENCE encounters
-│   └── store.tsx    # reducer, month loop, persistence, React context
-├── ui/              # Layout, Encounter modal, shared components, SVG charts
-└── screens/         # Home, City, Money, Invest, Career, Learn, Life,
-                     # Challenges, Leaderboard, Profile, What-If, Buildings…
+├── Game.tsx              # Canvas, scene switching, overlays, lighting
+├── GameState.ts          # centralized zustand game state + actions
+├── Player.tsx            # third-person humanoid + movement + interaction
+├── ThirdPersonCamera.tsx # follow camera
+├── PointerLook.tsx       # pointer-lock mouse look
+├── City.tsx              # exterior block (ground, roads, props, buildings)
+├── cityLayout.ts         # building/door/collision definitions
+├── collision.ts          # AABB collision helpers
+├── InteractionSystem.tsx # reusable proximity interaction registry + prompt
+├── DialogueSystem.tsx    # reusable dialogue UI
+├── NPC.tsx / Humanoid.tsx / props.tsx
+├── GameHUD.tsx / Minimap.tsx / LifeEventSystem.tsx
+├── Buildings/Building.tsx
+└── Interiors/            # Bank, Grocery, College, Office (+ Room shell)
 ```
 
-## Financial systems modeled
+## Initial player state
 
-Income & simplified taxes (FICA + federal + state), living/housing/transport
-expenses, savings & emergency-fund coverage, credit scores (utilization, payment
-history, history length, DTI), loans & amortized minimum payments, APR-driven debt
-growth, and a multi-asset investment model (HYSA, bonds, index funds, single stocks,
-crypto) with risk/volatility and diversification effects.
+Cash $500 · Bank $1,500 · Savings $1,000 · Weekly income $0 · Monthly expenses $300 ·
+Credit score 650 · Education: High School · Career: Student.
