@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei'
+import { Billboard, Text } from '@react-three/drei'
 import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { doorPosition, type BuildingDef } from '../cityLayout'
@@ -86,11 +86,18 @@ export function Building({ def }: { def: BuildingDef }) {
 
       {/* Entrance mat to guide the player to the door */}
       {def.enterable && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[door[0], 0.03, door[2] + def.facing * 1.3]}>
-          <planeGeometry args={[3, 2.4]} />
-          <meshStandardMaterial color={def.signColor} emissive={def.signColor} emissiveIntensity={0.35} transparent opacity={0.55} />
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[door[0], 0.03, door[2] + def.facing * 1.6]}>
+          <planeGeometry args={[4, 3.2]} />
+          <meshStandardMaterial color={def.signColor} emissive={def.signColor} emissiveIntensity={0.4} transparent opacity={0.6} />
         </mesh>
       )}
+
+      {/* Tall floating label so the building is easy to find from anywhere */}
+      <Billboard position={[def.x, def.h + 2.2, def.z]}>
+        <Text fontSize={1.0} color={def.signColor} anchorX="center" anchorY="middle" outlineWidth={0.03} outlineColor="#05070c">
+          {def.name}
+        </Text>
+      </Billboard>
 
       {def.enterable && def.scene && (
         <DoorTrigger def={def} onEnter={() => enterScene(def.scene!, INTERIOR_SPAWN[def.scene as 'bank'])} />
@@ -104,8 +111,8 @@ function DoorTrigger({ def, onEnter }: { def: BuildingDef; onEnter: () => void }
   console.log(`DoorTrigger for ${def.name} at position:`, [door[0], 0, door[2] + def.facing * 1.5], 'radius:', 4)
   useInteractable({
     scene: 'city',
-    position: [door[0], 0, door[2] + def.facing * 1.5],
-    radius: 4,
+    position: [door[0], 0, door[2] + def.facing * 1.8],
+    radius: 5,
     prompt: `Enter ${def.name}`,
     onInteract: onEnter,
     id: `door-${def.id}`,
