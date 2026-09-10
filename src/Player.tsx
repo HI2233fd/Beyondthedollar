@@ -35,6 +35,15 @@ export function Player() {
     const dt = Math.min(delta, 0.05)
     const locked = movementLocked()
 
+    // Arrow keys rotate the camera (works alongside mouse look).
+    if (!locked) {
+      const turn = 2.2 * dt
+      if (pressed.has('ArrowLeft')) rig.yaw.current += turn
+      if (pressed.has('ArrowRight')) rig.yaw.current -= turn
+      if (pressed.has('ArrowUp')) rig.pitch.current = Math.max(0.1, rig.pitch.current - turn)
+      if (pressed.has('ArrowDown')) rig.pitch.current = Math.min(1.2, rig.pitch.current + turn)
+    }
+
     let f = 0
     let r = 0
     if (!locked) {

@@ -159,7 +159,7 @@ export function Game() {
 
         {showHint && (
           <div className="controls-hint">
-            <strong>Click</strong> to look around · <strong>WASD</strong> move · <strong>E</strong> interact · <strong>ESC</strong> release/close
+            <strong>Click</strong> or <strong>◀ ▶</strong> to look · <strong>WASD</strong> move · <strong>E</strong> interact · <strong>ESC</strong> release/close
           </div>
         )}
 
