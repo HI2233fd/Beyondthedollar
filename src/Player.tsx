@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber'
 import { Group } from 'three'
 import { Humanoid } from './Humanoid'
 import { useRig } from './rig'
-import { pressed, movementLocked } from './keyboard'
+import { pressed, movementLocked, consumeInteract } from './keyboard'
 import { resolveMovement } from './collision'
 import { getActiveBoxes, lerpAngle } from './world'
 import { findNearest } from './InteractionSystem'
@@ -15,7 +15,6 @@ const RADIUS = 0.55
 export function Player() {
   const rig = useRig()
   const localRef = useRef<Group>(null)
-  const wasE = useRef(false)
 
   const scene = useGame((s) => s.scene)
   const spawn = useGame((s) => s.spawn)
@@ -71,16 +70,15 @@ export function Player() {
     }
     g.position.y = 0
 
-    // Interaction: find nearest, update prompt, handle E edge.
+    // Interaction: find nearest, update prompt, handle E press.
     const store = useGame.getState()
     const near = findNearest(g.position, store.scene)
     store.setPrompt(locked ? null : near ? near.prompt : null)
 
-    const eDown = pressed.has('KeyE')
-    if (eDown && !wasE.current && !locked && near) {
+    const wantInteract = consumeInteract()
+    if (wantInteract && !locked && near) {
       near.onInteract()
     }
-    wasE.current = eDown
   })
 
   return (

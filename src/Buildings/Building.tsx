@@ -84,6 +84,14 @@ export function Building({ def }: { def: BuildingDef }) {
         {def.sign}
       </Text>
 
+      {/* Entrance mat to guide the player to the door */}
+      {def.enterable && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[door[0], 0.03, door[2] + def.facing * 1.3]}>
+          <planeGeometry args={[3, 2.4]} />
+          <meshStandardMaterial color={def.signColor} emissive={def.signColor} emissiveIntensity={0.35} transparent opacity={0.55} />
+        </mesh>
+      )}
+
       {def.enterable && def.scene && (
         <DoorTrigger def={def} onEnter={() => enterScene(def.scene!, INTERIOR_SPAWN[def.scene as 'bank'])} />
       )}
@@ -93,10 +101,11 @@ export function Building({ def }: { def: BuildingDef }) {
 
 function DoorTrigger({ def, onEnter }: { def: BuildingDef; onEnter: () => void }) {
   const door = doorPosition(def)
+  console.log(`DoorTrigger for ${def.name} at position:`, [door[0], 0, door[2] + def.facing * 1.5], 'radius:', 4)
   useInteractable({
     scene: 'city',
-    position: [door[0], 0, door[2] + def.facing * 0.6],
-    radius: 3,
+    position: [door[0], 0, door[2] + def.facing * 1.5],
+    radius: 4,
     prompt: `Enter ${def.name}`,
     onInteract: onEnter,
     id: `door-${def.id}`,

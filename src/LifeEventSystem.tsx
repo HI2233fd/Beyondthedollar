@@ -15,7 +15,7 @@ export function LifeEventSystem() {
 
   useEffect(() => {
     if (shown) return
-    const t = setTimeout(() => trigger(), 45000)
+    const t = setTimeout(() => trigger(), 6000000)
     return () => clearTimeout(t)
   }, [shown, trigger])
 

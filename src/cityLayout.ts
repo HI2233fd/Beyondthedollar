@@ -123,6 +123,7 @@ export function cityCollision(): AABB[] {
   return boxes
 }
 
-export const CITY_START: Spawn = { pos: [-2, 0, 8], yaw: Math.PI }
+// Spawn directly in front of the bank so the first door is straight ahead.
+export const CITY_START: Spawn = { pos: [-9, 0, 3.5], yaw: Math.PI }
 
 export { WORLD }
