@@ -1,53 +1,58 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { box } from '../collision'
-import { useGame, type Dialogue } from '../GameState'
+import { useGame, type Dialogue, type DialogueOption } from '../GameState'
+
+const NAME = 'Manager — Diane'
 
 function officeDialogue(): Dialogue {
   const g = useGame.getState()
-  const leave = { label: 'Leave', close: true as const }
-  const menu = (): Dialogue => officeDialogue()
+  const leave: DialogueOption = { label: 'Leave', close: true }
 
   if (g.hasJob) {
     return {
-      name: 'Manager — Diane',
+      name: NAME,
       text: 'Good to see you on the team! You’re our Office Assistant at $16/hour, 15 hours a week. Keep it up.',
       options: [leave],
     }
   }
 
-  return {
-    name: 'Manager — Diane',
+  // Build the menu once and reference it from sub-answers (cyclic, not
+  // recursive) to avoid a stack overflow when the dialogue is opened.
+  const menu: Dialogue = {
+    name: NAME,
     text: 'We’re currently hiring part-time employees. Would you like to apply?',
-    options: [
-      {
-        label: 'Apply',
-        action: () => useGame.getState().applyJob(),
-        next: {
-          name: 'Manager — Diane',
-          text: 'Congratulations — you’re hired! You’re now an Office Assistant at $16/hour for 15 hours a week. Your weekly income is updated to $240.',
-          options: [leave],
-        },
-      },
-      {
-        label: 'Ask about pay',
-        next: {
-          name: 'Manager — Diane',
-          text: 'It’s $16 an hour, 15 hours a week — about $240 weekly before taxes. We review pay every six months.',
-          options: [{ label: 'Back', next: menu() }, leave],
-        },
-      },
-      {
-        label: 'Ask about the job',
-        next: {
-          name: 'Manager — Diane',
-          text: 'You’d handle filing, answering the phone, and helping the team stay organized. Flexible hours that work around school.',
-          options: [{ label: 'Back', next: menu() }, leave],
-        },
-      },
-      leave,
-    ],
+    options: [],
   }
+  menu.options = [
+    {
+      label: 'Apply',
+      action: () => useGame.getState().applyJob(),
+      next: {
+        name: NAME,
+        text: 'Congratulations — you’re hired! You’re now an Office Assistant at $16/hour for 15 hours a week. Your weekly income is updated to $240.',
+        options: [leave],
+      },
+    },
+    {
+      label: 'Ask about pay',
+      next: {
+        name: NAME,
+        text: 'It’s $16 an hour, 15 hours a week — about $240 weekly before taxes. We review pay every six months.',
+        options: [{ label: 'Back', next: menu }, leave],
+      },
+    },
+    {
+      label: 'Ask about the job',
+      next: {
+        name: NAME,
+        text: 'You’d handle filing, answering the phone, and helping the team stay organized. Flexible hours that work around school.',
+        options: [{ label: 'Back', next: menu }, leave],
+      },
+    },
+    leave,
+  ]
+  return menu
 }
 
 export function OfficeInterior() {
@@ -116,8 +121,8 @@ export function OfficeInterior() {
       <NPC
         id="office-manager"
         scene="office"
-        position={[5.5, 0, -3.5]}
-        rotation={-0.5}
+        position={[2, 0, -0.5]}
+        rotation={Math.PI}
         name="Diane"
         shirt="#b91c1c"
         pants="#1f2937"

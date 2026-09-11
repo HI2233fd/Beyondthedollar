@@ -1,42 +1,47 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { box } from '../collision'
-import type { Dialogue } from '../GameState'
+import type { Dialogue, DialogueOption } from '../GameState'
+
+const NAME = 'College Counselor — Ms. Alvarez'
 
 function collegeDialogue(): Dialogue {
-  const leave = { label: 'Leave', close: true as const }
-  const back = (): Dialogue => collegeDialogue()
-  return {
-    name: 'College Counselor — Ms. Alvarez',
+  const leave: DialogueOption = { label: 'Leave', close: true }
+  // Build the menu once, then reference it from sub-answers (cyclic, not
+  // recursive) so opening the dialogue never overflows the stack.
+  const menu: Dialogue = {
+    name: NAME,
     text: 'What are you thinking about after high school?',
-    options: [
-      {
-        label: 'Explore college majors',
-        next: {
-          name: 'College Counselor — Ms. Alvarez',
-          text: 'Popular majors include Computer Science, Nursing, Business, and Engineering. Pick something you enjoy and that has strong job demand — both matter.',
-          options: [{ label: 'Ask something else', next: back() }, leave],
-        },
-      },
-      {
-        label: 'View tuition costs',
-        next: {
-          name: 'College Counselor — Ms. Alvarez',
-          text: 'Community college runs about $4,000/year; a public university about $11,000/year in-state. Tuition, housing, and books all add up — plan ahead so you borrow as little as possible.',
-          options: [{ label: 'Ask something else', next: back() }, leave],
-        },
-      },
-      {
-        label: 'Learn about scholarships',
-        next: {
-          name: 'College Counselor — Ms. Alvarez',
-          text: 'Scholarships are free money you never repay — merit, need-based, and local community awards. Apply to many; even small ones add up and reduce loans.',
-          options: [{ label: 'Ask something else', next: back() }, leave],
-        },
-      },
-      leave,
-    ],
+    options: [],
   }
+  menu.options = [
+    {
+      label: 'Explore college majors',
+      next: {
+        name: NAME,
+        text: 'Popular majors include Computer Science, Nursing, Business, and Engineering. Pick something you enjoy and that has strong job demand — both matter.',
+        options: [{ label: 'Ask something else', next: menu }, leave],
+      },
+    },
+    {
+      label: 'View tuition costs',
+      next: {
+        name: NAME,
+        text: 'Community college runs about $4,000/year; a public university about $11,000/year in-state. Tuition, housing, and books all add up — plan ahead so you borrow as little as possible.',
+        options: [{ label: 'Ask something else', next: menu }, leave],
+      },
+    },
+    {
+      label: 'Learn about scholarships',
+      next: {
+        name: NAME,
+        text: 'Scholarships are free money you never repay — merit, need-based, and local community awards. Apply to many; even small ones add up and reduce loans.',
+        options: [{ label: 'Ask something else', next: menu }, leave],
+      },
+    },
+    leave,
+  ]
+  return menu
 }
 
 export function CollegeInterior() {
