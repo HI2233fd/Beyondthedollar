@@ -95,15 +95,21 @@ export function InteriorExit({ scene }: { scene: SceneId }) {
   useInteractable({
     id: `exit-${scene}`,
     scene,
-    position: [0, 0, 5.4],
-    radius: 2.4,
+    position: [0, 0, 5.3],
+    radius: 3,
     prompt: 'Exit to street',
     onInteract: () => enterScene('city', exitSpawn(building)),
   })
   return (
-    <group position={[0, 0, 6.1]}>
-      <Text position={[0, 2.4, -0.2]} fontSize={0.3} color="#111827" anchorX="center" anchorY="middle">
-        ← EXIT
+    <group>
+      {/* Glowing exit mat on the floor by the doorway */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 5.3]}>
+        <planeGeometry args={[2.6, 2.2]} />
+        <meshStandardMaterial color="#34d399" emissive="#34d399" emissiveIntensity={0.5} transparent opacity={0.5} />
+      </mesh>
+      {/* EXIT sign above the doorway */}
+      <Text position={[0, 3.1, 6.2]} rotation={[0, Math.PI, 0]} fontSize={0.5} color="#34d399" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#05221a">
+        EXIT ↓
       </Text>
     </group>
   )
