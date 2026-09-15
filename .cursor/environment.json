@@ -1,10 +1,11 @@
 {
   "name": "Beyond The Dollar",
-  "install": "npm ci",
+  "install": "export PATH=\"$HOME/.nvm/versions/node/v22.22.2/bin:$PATH\"\nnpm ci",
+  "start": "export PATH=\"$HOME/.nvm/versions/node/v22.22.2/bin:$PATH\"\nnpm run dev",
   "terminals": [
     {
       "name": "dev-server",
-      "command": "npm run dev"
+      "command": "export PATH=\"$HOME/.nvm/versions/node/v22.22.2/bin:$PATH\"\nnpm run dev"
     }
   ],
   "ports": [5173]
