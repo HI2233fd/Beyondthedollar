@@ -24,7 +24,7 @@ export const BUILDINGS: BuildingDef[] = [
     name: 'Home',
     sign: 'MAPLE APARTMENTS',
     signColor: '#e8c07a',
-    scene: null,
+    scene: 'home',
     x: -25,
     z: -13,
     w: 11,
@@ -32,7 +32,7 @@ export const BUILDINGS: BuildingDef[] = [
     h: 9,
     color: '#8a5a44',
     facing: 1,
-    enterable: false,
+    enterable: true,
   },
   {
     id: 'bank',

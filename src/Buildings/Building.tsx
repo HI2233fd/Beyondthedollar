@@ -3,9 +3,17 @@ import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { doorPosition, type BuildingDef } from '../cityLayout'
 import { INTERIOR_SPAWN } from '../Interiors/spawns'
+import { buildingHasActiveCurriculum } from '../curriculum'
+import type { BuildingId } from '../curriculum/types'
 
 export function Building({ def }: { def: BuildingDef }) {
   const enterScene = useGame((s) => s.enterScene)
+  const unlocked = useGame((s) => s.unlockedUnitNumber)
+  const completed = useGame((s) => s.completedTopicIds)
+  const learnHere =
+    def.enterable &&
+    buildingHasActiveCurriculum(def.id as BuildingId, unlocked, completed)
+
   const front = def.z + def.facing * (def.d / 2 + 0.02)
   const door = doorPosition(def)
 
@@ -31,6 +39,8 @@ export function Building({ def }: { def: BuildingDef }) {
           color={def.color}
           roughness={def.glass ? 0.15 : 0.85}
           metalness={def.glass ? 0.6 : 0.05}
+          emissive={learnHere ? def.signColor : '#000000'}
+          emissiveIntensity={learnHere ? 0.22 : 0}
         />
       </mesh>
 
@@ -46,8 +56,8 @@ export function Building({ def }: { def: BuildingDef }) {
           <planeGeometry args={[1.1, 1.4]} />
           <meshStandardMaterial
             color={def.glass ? '#bfe3ff' : '#8fb7d6'}
-            emissive="#3a5a72"
-            emissiveIntensity={0.25}
+            emissive={learnHere ? def.signColor : '#3a5a72'}
+            emissiveIntensity={learnHere ? 0.55 : 0.25}
             metalness={0.4}
             roughness={0.15}
           />
@@ -63,7 +73,13 @@ export function Building({ def }: { def: BuildingDef }) {
       {/* Door frame */}
       <mesh position={[door[0], 1.2, front + def.facing * 0.03]}>
         <planeGeometry args={[1.7, 2.4]} />
-        <meshStandardMaterial color="#12181f" metalness={0.3} roughness={0.4} />
+        <meshStandardMaterial
+          color="#12181f"
+          metalness={0.3}
+          roughness={0.4}
+          emissive={learnHere ? def.signColor : '#000000'}
+          emissiveIntensity={learnHere ? 0.35 : 0}
+        />
       </mesh>
 
       {/* Sign backing + text */}
@@ -84,11 +100,17 @@ export function Building({ def }: { def: BuildingDef }) {
         {def.sign}
       </Text>
 
-      {/* Entrance mat to guide the player to the door */}
+      {/* Entrance mat — brighter when this building hosts the next lesson */}
       {def.enterable && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[door[0], 0.03, door[2] + def.facing * 1.6]}>
           <planeGeometry args={[4, 3.2]} />
-          <meshStandardMaterial color={def.signColor} emissive={def.signColor} emissiveIntensity={0.4} transparent opacity={0.6} />
+          <meshStandardMaterial
+            color={def.signColor}
+            emissive={def.signColor}
+            emissiveIntensity={learnHere ? 0.85 : 0.4}
+            transparent
+            opacity={learnHere ? 0.85 : 0.6}
+          />
         </mesh>
       )}
 
@@ -99,8 +121,26 @@ export function Building({ def }: { def: BuildingDef }) {
         </Text>
       </Billboard>
 
+      {learnHere && (
+        <Billboard position={[def.x, def.h + 3.6, def.z]}>
+          <Text
+            fontSize={0.72}
+            color="#f8fafc"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.04}
+            outlineColor="#0ea5e9"
+          >
+            LEARN HERE
+          </Text>
+        </Billboard>
+      )}
+
       {def.enterable && def.scene && (
-        <DoorTrigger def={def} onEnter={() => enterScene(def.scene!, INTERIOR_SPAWN[def.scene as 'bank'])} />
+        <DoorTrigger
+          def={def}
+          onEnter={() => enterScene(def.scene!, INTERIOR_SPAWN[def.scene as keyof typeof INTERIOR_SPAWN])}
+        />
       )}
     </group>
   )
@@ -108,7 +148,6 @@ export function Building({ def }: { def: BuildingDef }) {
 
 function DoorTrigger({ def, onEnter }: { def: BuildingDef; onEnter: () => void }) {
   const door = doorPosition(def)
-  console.log(`DoorTrigger for ${def.name} at position:`, [door[0], 0, door[2] + def.facing * 1.5], 'radius:', 4)
   useInteractable({
     scene: 'city',
     position: [door[0], 0, door[2] + def.facing * 1.8],

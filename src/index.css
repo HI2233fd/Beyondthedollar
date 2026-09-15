@@ -395,3 +395,202 @@ canvas {
 .fade-overlay.show {
   opacity: 1;
 }
+
+/* ---------- Curriculum ---------- */
+.curriculum-hud {
+  position: absolute;
+  left: 16px;
+  top: 92px;
+  z-index: 10;
+  width: min(280px, 42vw);
+  background: var(--panel);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  pointer-events: auto;
+}
+.curriculum-hud-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.curriculum-hud-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.curriculum-hud-progress {
+  font-size: 0.72rem;
+  color: var(--accent-2);
+  font-weight: 700;
+}
+.curriculum-hud-unit {
+  font-weight: 800;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.curriculum-hud-hint {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.curriculum-hud-hint strong {
+  color: var(--accent);
+}
+.curriculum-hud-btn {
+  margin-top: 10px;
+  width: 100%;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.12);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.curriculum-hud-btn:hover {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.curriculum-overlay {
+  z-index: 35;
+  align-items: start;
+  overflow: auto;
+}
+.curriculum-card {
+  width: min(720px, 94vw);
+  max-height: min(88vh, 900px);
+  overflow: auto;
+  background: linear-gradient(180deg, #182234, #0e1524);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 24px 26px 22px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  margin: 4vh auto;
+}
+.curriculum-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.curriculum-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #fde68a;
+  background: rgba(253, 230, 138, 0.12);
+  border: 1px solid rgba(253, 230, 138, 0.28);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.curriculum-building {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.curriculum-title {
+  margin: 4px 0 4px;
+  font-size: 1.45rem;
+}
+.curriculum-unit-line {
+  color: var(--muted);
+  margin: 0 0 14px;
+  font-size: 0.9rem;
+}
+.curriculum-body p {
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0 0 12px;
+  font-size: 0.98rem;
+}
+.curriculum-why {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: var(--text);
+  line-height: 1.5;
+}
+.curriculum-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  flex-wrap: wrap;
+}
+.curriculum-btn {
+  border-radius: 12px;
+  padding: 11px 18px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid var(--line);
+}
+.curriculum-btn.primary {
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #05221a;
+}
+.curriculum-btn.ghost {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.curriculum-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.quiz-list {
+  display: grid;
+  gap: 16px;
+}
+.quiz-prompt {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.quiz-choices {
+  display: grid;
+  gap: 8px;
+}
+.quiz-choice {
+  text-align: left;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.quiz-choice.selected {
+  border-color: var(--accent-2);
+  background: rgba(56, 189, 248, 0.12);
+}
+.quiz-choice.correct {
+  border-color: var(--accent);
+  background: rgba(52, 211, 153, 0.16);
+}
+.quiz-choice.wrong {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.14);
+}
+.quiz-explain {
+  margin: 8px 0 0;
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.quiz-result {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+

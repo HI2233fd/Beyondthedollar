@@ -3,6 +3,7 @@ import { NPC } from '../NPC'
 import { Guest, Chair, Plant, WallClock } from '../props'
 import { box } from '../collision'
 import type { Dialogue, DialogueOption } from '../GameState'
+import { LearningStation } from '../curriculum/LearningStation'
 
 const NAME = 'College Counselor — Ms. Alvarez'
 
@@ -125,6 +126,8 @@ export function CollegeInterior() {
         getDialogue={collegeDialogue}
       />
 
+
+      <LearningStation buildingId="college" scene="college" position={[5.5, 0, 2.2]} />
       <InteriorExit scene="college" />
     </Room>
   )

@@ -16,7 +16,15 @@ export function PointerLook() {
 
     const onClick = () => {
       const s = useGame.getState()
-      if (s.dialogue || s.lifeEventActive || s.lifeEventOutcome || s.transitioning) return
+      if (
+        s.dialogue ||
+        s.lifeEventActive ||
+        s.lifeEventOutcome ||
+        s.transitioning ||
+        s.activeLessonId ||
+        s.activeQuizId
+      )
+        return
       if (document.pointerLockElement !== el) el.requestPointerLock?.()
     }
 
@@ -32,9 +40,11 @@ export function PointerLook() {
     el.addEventListener('click', onClick)
     window.addEventListener('mousemove', onMove)
 
-    // Release the mouse when a modal/dialogue opens.
+    // Release the mouse when a modal/dialogue/lesson opens.
     const unsub = useGame.subscribe((s) => {
-      if ((s.dialogue || s.lifeEventActive || s.lifeEventOutcome) && document.pointerLockElement === el) {
+      const modal =
+        s.dialogue || s.lifeEventActive || s.lifeEventOutcome || s.activeLessonId || s.activeQuizId
+      if (modal && document.pointerLockElement === el) {
         document.exitPointerLock?.()
       }
     })

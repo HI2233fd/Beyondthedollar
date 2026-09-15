@@ -21,7 +21,10 @@ export function initControls() {
       interactQueued = true
     }
     if (e.code === 'Escape') {
-      useGame.getState().closeDialogue()
+      const g = useGame.getState()
+      if (g.activeQuizId) g.closeQuiz()
+      else if (g.activeLessonId) g.closeLesson()
+      else g.closeDialogue()
     }
   })
 
@@ -44,5 +47,12 @@ export function consumeInteract(): boolean {
 
 export function movementLocked(): boolean {
   const s = useGame.getState()
-  return !!s.dialogue || s.transitioning || s.lifeEventActive || !!s.lifeEventOutcome
+  return (
+    !!s.dialogue ||
+    s.transitioning ||
+    s.lifeEventActive ||
+    !!s.lifeEventOutcome ||
+    !!s.activeLessonId ||
+    !!s.activeQuizId
+  )
 }

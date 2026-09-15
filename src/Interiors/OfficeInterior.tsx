@@ -3,6 +3,7 @@ import { NPC } from '../NPC'
 import { Guest, Plant, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue, type DialogueOption } from '../GameState'
+import { LearningStation } from '../curriculum/LearningStation'
 
 const NAME = 'Manager — Diane'
 
@@ -165,6 +166,8 @@ export function OfficeInterior() {
         getDialogue={officeDialogue}
       />
 
+
+      <LearningStation buildingId="office" scene="office" position={[-5.0, 0, 2.2]} />
       <InteriorExit scene="office" />
     </Room>
   )

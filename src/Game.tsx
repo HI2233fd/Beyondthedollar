@@ -11,11 +11,15 @@ import { BankInterior } from './Interiors/BankInterior'
 import { GroceryInterior } from './Interiors/GroceryInterior'
 import { CollegeInterior } from './Interiors/CollegeInterior'
 import { OfficeInterior } from './Interiors/OfficeInterior'
+import { HomeInterior } from './Interiors/HomeInterior'
 import { GameHUD } from './GameHUD'
 import { Minimap } from './Minimap'
 import { DialogueSystem } from './DialogueSystem'
 import { InteractionPrompt } from './InteractionSystem'
 import { LifeEventSystem } from './LifeEventSystem'
+import { LessonPanel } from './LessonPanel'
+import { QuizPanel } from './QuizPanel'
+import { CurriculumHUD } from './CurriculumHUD'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -29,6 +33,7 @@ function SceneContent() {
       {scene === 'grocery' && <GroceryInterior />}
       {scene === 'college' && <CollegeInterior />}
       {scene === 'office' && <OfficeInterior />}
+      {scene === 'home' && <HomeInterior />}
     </>
   )
 }
@@ -82,6 +87,8 @@ export function Game() {
   const dialogue = useGame((s) => s.dialogue)
   const lifeActive = useGame((s) => s.lifeEventActive)
   const outcome = useGame((s) => s.lifeEventOutcome)
+  const lessonOpen = useGame((s) => s.activeLessonId)
+  const quizOpen = useGame((s) => s.activeQuizId)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -111,7 +118,7 @@ export function Game() {
     return () => document.removeEventListener('pointerlockchange', onChange)
   }, [])
 
-  const modalOpen = !!dialogue || lifeActive || !!outcome
+  const modalOpen = !!dialogue || lifeActive || !!outcome || !!lessonOpen || !!quizOpen
   const showHint = !locked && !modalOpen
 
   return (
@@ -151,10 +158,13 @@ export function Game() {
 
         {/* Overlays */}
         <GameHUD />
+        <CurriculumHUD />
         <Minimap />
         <InteractionPrompt />
         <CartPanel />
         <DialogueSystem />
+        <LessonPanel />
+        <QuizPanel />
         <LifeEventSystem />
 
         {showHint && (

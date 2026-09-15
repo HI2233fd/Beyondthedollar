@@ -7,4 +7,5 @@ export const INTERIOR_SPAWN: Record<Exclude<SceneId, 'city'>, Spawn> = {
   grocery: { pos: [0, 0, 2.5], yaw: Math.PI },
   college: { pos: [0, 0, 2], yaw: Math.PI },
   office: { pos: [0, 0, 2.5], yaw: Math.PI },
+  home: { pos: [0, 0, 2], yaw: Math.PI },
 }

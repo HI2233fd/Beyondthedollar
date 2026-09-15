@@ -5,6 +5,7 @@ import { Guest, Plant } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
+import { LearningStation } from '../curriculum/LearningStation'
 
 interface Product {
   id: string
@@ -205,6 +206,8 @@ export function GroceryInterior() {
         })}
       />
 
+
+      <LearningStation buildingId="grocery" scene="grocery" position={[5.2, 0, 2.0]} />
       <InteriorExit scene="grocery" />
     </Room>
   )

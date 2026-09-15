@@ -46,19 +46,6 @@ export interface Unit {
 
 export type LessonStatus = 'locked' | 'available' | 'completed'
 
-export interface CurriculumProgress {
-  /** Topic IDs whose lesson+quiz are fully completed. */
-  completedTopicIds: string[]
-  /** Highest unit number unlocked (1-based). Completing a unit unlocks the next. */
-  unlockedUnitNumber: number
-  /** Open overlay: lesson reading or quiz. */
-  activeLessonId: string | null
-  activeQuizId: string | null
-  /** Current quiz answers keyed by question id → chosen index. */
-  quizAnswers: Record<string, number>
-  quizSubmitted: boolean
-}
-
 /** Map building → scene used by LearningStation placement. */
 export const BUILDING_SCENE: Record<BuildingId, SceneId> = {
   home: 'home',

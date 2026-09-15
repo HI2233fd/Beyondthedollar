@@ -3,6 +3,7 @@ import { NPC } from '../NPC'
 import { Guest, Chair, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue } from '../GameState'
+import { LearningStation } from '../curriculum/LearningStation'
 
 function bankDialogue(): Dialogue {
   const g = useGame.getState()
@@ -138,6 +139,8 @@ export function BankInterior() {
         getDialogue={bankDialogue}
       />
 
+
+      <LearningStation buildingId="bank" scene="bank" position={[-6.5, 0, -1.2]} />
       <InteriorExit scene="bank" />
     </Room>
   )

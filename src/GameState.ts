@@ -1,6 +1,7 @@
 import { create } from 'zustand'
+import { CURRICULUM, unlockedAfterCompleting } from './curriculum'
 
-export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office'
+export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
 
 export interface DialogueOption {
   label: string
@@ -63,6 +64,14 @@ interface GameState {
   // --- flags ---
   hasJob: boolean
 
+  // --- Curriculum progress ---
+  completedTopicIds: string[]
+  unlockedUnitNumber: number
+  activeLessonId: string | null
+  activeQuizId: string | null
+  quizAnswers: Record<string, number>
+  quizSubmitted: boolean
+
   // --- actions ---
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
@@ -81,6 +90,13 @@ interface GameState {
   triggerLifeEvent: () => void
   resolveLifeEvent: (choice: 'savings' | 'credit' | 'delay') => void
   dismissLifeEventOutcome: () => void
+
+  openLesson: (lessonId: string) => void
+  closeLesson: () => void
+  startQuiz: (quizId: string) => void
+  answerQuiz: (questionId: string, choiceIndex: number) => void
+  submitQuiz: () => void
+  closeQuiz: () => void
 }
 
 export const useGame = create<GameState>((set, get) => ({
@@ -109,6 +125,13 @@ export const useGame = create<GameState>((set, get) => ({
   lifeEventOutcome: null,
 
   hasJob: false,
+
+  completedTopicIds: [],
+  unlockedUnitNumber: 1,
+  activeLessonId: null,
+  activeQuizId: null,
+  quizAnswers: {},
+  quizSubmitted: false,
 
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
@@ -158,6 +181,45 @@ export const useGame = create<GameState>((set, get) => ({
     }
   },
   dismissLifeEventOutcome: () => set({ lifeEventOutcome: null }),
+
+  openLesson: (lessonId) =>
+    set({
+      activeLessonId: lessonId,
+      activeQuizId: null,
+      quizAnswers: {},
+      quizSubmitted: false,
+      dialogue: null,
+      prompt: null,
+    }),
+  closeLesson: () => set({ activeLessonId: null }),
+  startQuiz: (quizId) =>
+    set({
+      activeQuizId: quizId,
+      activeLessonId: null,
+      quizAnswers: {},
+      quizSubmitted: false,
+    }),
+  answerQuiz: (questionId, choiceIndex) => {
+    if (get().quizSubmitted) return
+    set({ quizAnswers: { ...get().quizAnswers, [questionId]: choiceIndex } })
+  },
+  submitQuiz: () => {
+    const { activeQuizId, quizAnswers, completedTopicIds, unlockedUnitNumber } = get()
+    if (!activeQuizId) return
+    const found = CURRICULUM.flatMap((u) => u.topics.map((t) => ({ topic: t, lesson: t.lesson }))).find(
+      (x) => x.lesson.quiz.id === activeQuizId,
+    )
+    if (!found) return
+    const perfect = found.lesson.quiz.questions.every((qq) => quizAnswers[qq.id] === qq.correctIndex)
+    set({ quizSubmitted: true })
+    if (!perfect || completedTopicIds.includes(found.topic.id)) return
+    const nextCompleted = [...completedTopicIds, found.topic.id]
+    set({
+      completedTopicIds: nextCompleted,
+      unlockedUnitNumber: unlockedAfterCompleting(nextCompleted, unlockedUnitNumber),
+    })
+  },
+  closeQuiz: () => set({ activeQuizId: null, quizAnswers: {}, quizSubmitted: false }),
 }))
 
 export const SCENE_LOCATION: Record<SceneId, string> = {
@@ -166,4 +228,5 @@ export const SCENE_LOCATION: Record<SceneId, string> = {
   grocery: 'FreshMart Grocery',
   college: 'Merridian College',
   office: 'Summit Office',
+  home: 'Maple Apartments',
 }
