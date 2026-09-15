@@ -23,6 +23,11 @@ export interface ScenarioEffects {
     amount: number
     from: 'savings' | 'bank' | 'cash' | 'credit' | 'delay'
   }
+  /** Resolve a queued recurring bill. */
+  billPay?: {
+    billId: string
+    from: 'savings' | 'bank' | 'cash' | 'miss'
+  }
   /** Car dealership outcome. */
   carDeal?: 'buy' | 'lease' | 'pass'
   /** Housing outcome at Maple Apartments. */

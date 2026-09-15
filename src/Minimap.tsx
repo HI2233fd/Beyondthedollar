@@ -42,8 +42,12 @@ export function Minimap() {
   return (
     <div className="minimap">
       <div className="minimap-inner" style={{ width: SIZE, height: SIZE }}>
-        {/* road line */}
+        {/* roads */}
         <div className="minimap-road" style={{ top: toMap(0, 0).top - 3 }} />
+        <div
+          className="minimap-road minimap-road-ns"
+          style={{ left: toMap(0, 0).left - 3, top: 0, width: 6, height: SIZE }}
+        />
         {BUILDINGS.map((b) => {
           const { left, top } = toMap(b.x, b.z)
           return (

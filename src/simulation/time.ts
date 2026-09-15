@@ -167,5 +167,5 @@ export function lightingForMinuteOfDay(minuteOfDay: number): LightingState {
   }
 }
 
-/** Default: 2 game minutes per real second → ~12 real minutes per game day. */
-export const DEFAULT_GAME_MINUTES_PER_REAL_SECOND = 2
+/** Default: 1 game minute per real second → 1 real minute = 1 game hour; 1 game day ≈ 24 real minutes. */
+export const DEFAULT_GAME_MINUTES_PER_REAL_SECOND = 1

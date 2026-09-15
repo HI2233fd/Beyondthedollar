@@ -176,8 +176,9 @@ export function randInt(min: number, max: number): number {
   return Math.floor(min + Math.random() * (max - min + 1))
 }
 
-export function rollNextExpenseAt(fromTotalMinutes: number): number {
-  const days = randInt(5, 15)
+/** First surprise arrives sooner so players see the system; later rolls use 5–15 days. */
+export function rollNextExpenseAt(fromTotalMinutes: number, opts?: { first?: boolean }): number {
+  const days = opts?.first ? randInt(2, 4) : randInt(5, 15)
   const hour = randInt(8, 20)
   const minute = randInt(0, 59)
   return fromTotalMinutes + days * MINUTES_PER_DAY + hour * 60 + minute

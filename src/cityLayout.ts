@@ -6,7 +6,7 @@ export interface BuildingDef {
   name: string
   sign: string
   signColor: string
-  scene: SceneId | null // enterable target scene (null = home / not enterable)
+  scene: SceneId | null
   x: number
   z: number
   w: number
@@ -14,10 +14,11 @@ export interface BuildingDef {
   h: number
   color: string
   glass?: boolean
-  facing: 1 | -1 // door faces +z (1) or -z (-1)
+  facing: 1 | -1
   enterable: boolean
 }
 
+/** Same five buildings, spread across a larger block. */
 export const BUILDINGS: BuildingDef[] = [
   {
     id: 'home',
@@ -25,8 +26,8 @@ export const BUILDINGS: BuildingDef[] = [
     sign: 'MAPLE APARTMENTS',
     signColor: '#e8c07a',
     scene: 'home',
-    x: -25,
-    z: -13,
+    x: -36,
+    z: -22,
     w: 11,
     d: 9,
     h: 9,
@@ -40,8 +41,8 @@ export const BUILDINGS: BuildingDef[] = [
     sign: 'FIRSTCITY BANK',
     signColor: '#7dd3fc',
     scene: 'bank',
-    x: -9,
-    z: -13,
+    x: -12,
+    z: -22,
     w: 11,
     d: 9,
     h: 7.5,
@@ -55,8 +56,8 @@ export const BUILDINGS: BuildingDef[] = [
     sign: 'MERRIDIAN COLLEGE',
     signColor: '#fca5a5',
     scene: 'college',
-    x: 11,
-    z: -15,
+    x: 22,
+    z: -24,
     w: 17,
     d: 12,
     h: 10,
@@ -70,8 +71,8 @@ export const BUILDINGS: BuildingDef[] = [
     sign: 'FRESHMART',
     signColor: '#86efac',
     scene: 'grocery',
-    x: -16,
-    z: 13,
+    x: -28,
+    z: 22,
     w: 14,
     d: 9,
     h: 6.5,
@@ -85,8 +86,8 @@ export const BUILDINGS: BuildingDef[] = [
     sign: 'SUMMIT TOWER',
     signColor: '#93c5fd',
     scene: 'office',
-    x: 9,
-    z: 14,
+    x: 18,
+    z: 24,
     w: 12,
     d: 11,
     h: 16,
@@ -101,7 +102,6 @@ export function doorPosition(b: BuildingDef): [number, number, number] {
   return [b.x, 0, b.z + b.facing * (b.d / 2)]
 }
 
-/** Where to place the player (outside) after leaving the building. */
 export function exitSpawn(b: BuildingDef): Spawn {
   return {
     pos: [b.x, 0, b.z + b.facing * (b.d / 2 + 2.4)],
@@ -109,12 +109,12 @@ export function exitSpawn(b: BuildingDef): Spawn {
   }
 }
 
-const WORLD = { minX: -42, maxX: 42, minZ: -32, maxZ: 32 }
+/** Expanded playable area — more street to walk. */
+const WORLD = { minX: -58, maxX: 58, minZ: -42, maxZ: 42 }
 
 export function cityCollision(): AABB[] {
   const boxes: AABB[] = []
   for (const b of BUILDINGS) boxes.push(box(b.x, b.z, b.w, b.d))
-  // world boundary walls (thick boxes just outside the play area)
   const t = 2
   boxes.push({ minX: WORLD.minX - t, maxX: WORLD.minX, minZ: WORLD.minZ - t, maxZ: WORLD.maxZ + t })
   boxes.push({ minX: WORLD.maxX, maxX: WORLD.maxX + t, minZ: WORLD.minZ - t, maxZ: WORLD.maxZ + t })
@@ -123,7 +123,7 @@ export function cityCollision(): AABB[] {
   return boxes
 }
 
-// Spawn directly in front of the bank so the first door is straight ahead.
-export const CITY_START: Spawn = { pos: [-9, 0, 3.5], yaw: Math.PI }
+/** Spawn on the main avenue near the bank. */
+export const CITY_START: Spawn = { pos: [-12, 0, 2], yaw: Math.PI }
 
 export { WORLD }

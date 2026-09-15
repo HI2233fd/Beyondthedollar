@@ -7,6 +7,107 @@ import { LearningStation } from '../curriculum/LearningStation'
 
 const NAME = 'Manager — Diane'
 
+function showResult() {
+  const result = useGame.getState().finishInterview()
+  useGame.setState({
+    dialogue: {
+      name: NAME,
+      text: result.message,
+      options: [{ label: result.hired ? 'Thanks!' : 'I’ll try again later', close: true }],
+    },
+  })
+}
+
+function q3(): Dialogue {
+  return {
+    name: NAME,
+    text: 'Last one: A customer is upset about a delayed form. What do you do first?',
+    options: [
+      {
+        label: 'Listen, apologize, then check the status',
+        action: () => {
+          useGame.getState().answerInterview(true)
+          showResult()
+        },
+      },
+      {
+        label: 'Tell them it’s not my department',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          showResult()
+        },
+      },
+      {
+        label: 'Ignore it until they calm down',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          showResult()
+        },
+      },
+    ],
+  }
+}
+
+function q2(): Dialogue {
+  return {
+    name: NAME,
+    text: 'If you’re scheduled 15 hours but a friend invites you to skip a shift, you…',
+    options: [
+      {
+        label: 'Keep the shift — or swap it properly with the manager',
+        action: () => {
+          useGame.getState().answerInterview(true)
+          useGame.setState({ dialogue: q3() })
+        },
+      },
+      {
+        label: 'Just don’t show up',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          useGame.setState({ dialogue: q3() })
+        },
+      },
+      {
+        label: 'Text a coworker at the last minute and hope',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          useGame.setState({ dialogue: q3() })
+        },
+      },
+    ],
+  }
+}
+
+function q1(): Dialogue {
+  return {
+    name: NAME,
+    text: 'Interview time. Question 1: We’re open weekdays after school. Can you commit to those hours?',
+    options: [
+      {
+        label: 'Yes — I can do weekday afternoons',
+        action: () => {
+          useGame.getState().answerInterview(true)
+          useGame.setState({ dialogue: q2() })
+        },
+      },
+      {
+        label: 'Only if I feel like it each week',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          useGame.setState({ dialogue: q2() })
+        },
+      },
+      {
+        label: 'I need every afternoon free for gaming',
+        action: () => {
+          useGame.getState().answerInterview(false)
+          useGame.setState({ dialogue: q2() })
+        },
+      },
+    ],
+  }
+}
+
 function officeDialogue(): Dialogue {
   const g = useGame.getState()
   const leave: DialogueOption = { label: 'Leave', close: true }
@@ -15,44 +116,42 @@ function officeDialogue(): Dialogue {
     const weekly = Math.round(g.weeklyIncome * g.incomeFactor)
     return {
       name: NAME,
-      text: `Good to see you! Office Assistant at $16/hour. This week’s expected take-home is about $${weekly} before you see the stub on your phone.`,
+      text: `Good to see you! Office Assistant at $16/hour. This week’s expected gross is about $${weekly} before taxes — stubs are on your phone.`,
       options: [leave],
     }
   }
 
   const menu: Dialogue = {
     name: NAME,
-    text: 'We’re hiring part-time. Direct deposit required — do you have checking?',
+    text: 'Part-time Office Assistant opening. Requirements: high school diploma, checking for direct deposit, reliable weekday hours. Interview required — we don’t hire on a handshake.',
     options: [],
   }
+
   menu.options = [
     {
-      label: 'Apply',
+      label: 'Read full requirements',
+      next: {
+        name: NAME,
+        text: 'Must have: (1) HS diploma/GED, (2) checking account for direct deposit, (3) pass a short interview. Experience helps but isn’t required. Wrong answers lower your odds — rejection is real.',
+        options: [{ label: 'Back', next: menu }, leave],
+      },
+    },
+    {
+      label: 'Start application / interview',
       action: () => {
-        const msg = useGame.getState().applyJob()
-        if (msg) {
-          useGame.setState({
-            dialogue: {
-              name: NAME,
-              text: msg,
-              options: [leave],
-            },
-          })
+        const err = useGame.getState().beginInterview()
+        if (err) {
+          useGame.setState({ dialogue: { name: NAME, text: err, options: [leave] } })
+        } else {
+          useGame.setState({ dialogue: q1() })
         }
       },
-      next: g.hasCheckingAccount
-        ? {
-            name: NAME,
-            text: 'Congratulations — hired as Office Assistant at $16/hour, 15 hours a week (~$240). Paystubs land on your phone.',
-            options: [leave],
-          }
-        : undefined,
     },
     {
       label: 'Ask about pay',
       next: {
         name: NAME,
-        text: 'It’s $16 an hour, 15 hours a week — about $240 weekly before taxes. Direct deposit to checking only.',
+        text: '$16/hour, ~15 hours/week (~$240 gross). Direct deposit only. Paystubs appear on your phone after payday.',
         options: [{ label: 'Back', next: menu }, leave],
       },
     },
@@ -78,7 +177,6 @@ export function OfficeInterior() {
       wall="#dfe6ee"
       extraBoxes={deskPos.map(([x, z]) => box(x, z, 2.2, 1.1))}
     >
-      {/* Glass back wall accent */}
       <mesh position={[0, 2.2, -6.7]}>
         <planeGeometry args={[14, 3.4]} />
         <meshStandardMaterial color="#bfe3ff" metalness={0.5} roughness={0.1} transparent opacity={0.5} />
@@ -86,7 +184,6 @@ export function OfficeInterior() {
 
       {deskPos.map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
-          {/* desk */}
           <mesh position={[0, 0.75, 0]} castShadow>
             <boxGeometry args={[2.2, 0.1, 1.1]} />
             <meshStandardMaterial color="#e5e7eb" />
@@ -97,79 +194,29 @@ export function OfficeInterior() {
               <meshStandardMaterial color="#9ca3af" />
             </mesh>
           ))}
-          {/* monitor */}
           <mesh position={[0, 1.15, -0.3]} castShadow>
             <boxGeometry args={[0.9, 0.55, 0.06]} />
             <meshStandardMaterial color="#0b1220" emissive="#1e3a5f" emissiveIntensity={0.5} />
           </mesh>
-          <mesh position={[0, 0.86, -0.3]}>
-            <boxGeometry args={[0.12, 0.16, 0.12]} />
-            <meshStandardMaterial color="#374151" />
-          </mesh>
-          {/* office chair */}
-          <group position={[0, 0, 0.9]}>
-            <mesh position={[0, 0.5, 0]} castShadow>
-              <boxGeometry args={[0.7, 0.14, 0.7]} />
-              <meshStandardMaterial color="#111827" />
-            </mesh>
-            <mesh position={[0, 0.95, -0.32]}>
-              <boxGeometry args={[0.7, 0.8, 0.12]} />
-              <meshStandardMaterial color="#111827" />
-            </mesh>
-            <mesh position={[0, 0.22, 0]}>
-              <cylinderGeometry args={[0.06, 0.06, 0.44, 8]} />
-              <meshStandardMaterial color="#4b5563" />
-            </mesh>
-          </group>
         </group>
       ))}
 
-      {/* Coworkers at their desks */}
-      <Guest position={[-4, 0, -1.1]} rotation={0} shirt="#0ea5e9" pants="#1f2937" />
-      <Guest position={[-4, 0, 2.4]} rotation={0} shirt="#f59e0b" skin="#8d5a3c" />
-      <Guest position={[4, 0, 2.4]} rotation={0} shirt="#a855f7" hair="#111" />
-
-      {/* Water cooler */}
-      <group position={[-7, 0, 4.5]}>
-        <mesh position={[0, 0.55, 0]} castShadow>
-          <boxGeometry args={[0.5, 1.1, 0.5]} />
-          <meshStandardMaterial color="#e5e7eb" />
-        </mesh>
-        <mesh position={[0, 1.35, 0]}>
-          <cylinderGeometry args={[0.22, 0.22, 0.5, 12]} />
-          <meshStandardMaterial color="#7dd3fc" transparent opacity={0.7} />
-        </mesh>
-      </group>
-
-      {/* Whiteboard on the left wall */}
-      <mesh position={[-7.7, 2.2, -1.5]}>
-        <boxGeometry args={[0.1, 1.6, 3.4]} />
-        <meshStandardMaterial color="#f8fafc" />
-      </mesh>
-      {[[-0.3, 0.6], [0.4, -0.4]].map(([y, z], i) => (
-        <mesh key={i} position={[-7.63, 2.2 + y, z]}>
-          <boxGeometry args={[0.02, 0.06, 1.2]} />
-          <meshStandardMaterial color={['#2563eb', '#dc2626'][i]} />
-        </mesh>
-      ))}
-
-      <Plant position={[7, 0, 4.6]} />
-      <Plant position={[7, 0, -5]} scale={0.85} />
-      <WallClock position={[0, 3.4, -6.74]} />
+      <WallClock position={[0, 3.4, -6.6]} />
+      <Plant position={[-7, 0, 5]} />
+      <Plant position={[7, 0, -5]} scale={0.9} />
+      <Guest position={[-4, 0, -1.2]} rotation={0} shirt="#64748b" />
+      <Guest position={[4, 0, -1.2]} rotation={0} shirt="#0ea5e9" />
 
       <NPC
-        id="office-manager"
+        id="office-diane"
         scene="office"
-        position={[2, 0, -0.5]}
+        position={[0, 0, 3.2]}
         rotation={Math.PI}
         name="Diane"
-        shirt="#b91c1c"
-        pants="#1f2937"
-        skin="#e0ac69"
-        hair="#3b3b3b"
+        shirt="#1d4ed8"
+        pants="#111827"
         getDialogue={officeDialogue}
       />
-
 
       <LearningStation buildingId="office" scene="office" position={[-5.0, 0, 2.2]} />
       <InteriorExit scene="office" />

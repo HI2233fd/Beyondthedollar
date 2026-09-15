@@ -140,11 +140,21 @@ interface GameState {
   engagedScenarioIds: string[]
 
   recurringBills: RecurringBill[]
+  /** Bill ids that are due and waiting for a Scenario resolution. */
+  dueBillIds: string[]
   lastBillNotice: string | null
   lastMarketNotice: string | null
   recentlyMissedBill: boolean
 
+  /** Random life-expense scheduler. */
   nextRandomExpenseAt: number
+  /** After the first expense, use the normal 5–15 day spacing. */
+  randomExpenseCount: number
+
+  /** Job interview progress (null = not interviewing). */
+  interviewCorrect: number
+  interviewAsked: number
+  interviewActive: boolean
 
   assetPrices: Record<AssetId, number>
   holdings: Holdings
@@ -206,6 +216,10 @@ interface GameState {
 
   openCarDealScenario: () => void
   openHomeDealScenario: () => void
+
+  beginInterview: () => string | null
+  answerInterview: (correct: boolean) => void
+  finishInterview: () => { hired: boolean; message: string }
 }
 
 function liquidFunds(s: { bank: number; savings: number; cash: number }) {
@@ -290,14 +304,19 @@ export const useGame = create<GameState>((set, get) => ({
   engagedScenarioIds: [],
 
   recurringBills: [
-    billInDays('rent-maple', 'Maple Apartments rent', RENT_MONTHLY, 30, START_TOTAL_MINUTES, 'rent', 7),
+    billInDays('rent-maple', 'Maple Apartments rent', RENT_MONTHLY, 30, START_TOTAL_MINUTES, 'rent', 2),
   ],
+  dueBillIds: [],
   lastBillNotice: null,
   lastMarketNotice: null,
   recentlyMissedBill: false,
 
-  nextRandomExpenseAt: rollNextExpenseAt(START_TOTAL_MINUTES),
+  nextRandomExpenseAt: rollNextExpenseAt(START_TOTAL_MINUTES, { first: true }),
+  randomExpenseCount: 0,
 
+  interviewCorrect: 0,
+  interviewAsked: 0,
+  interviewActive: false,
   assetPrices: { stock: INITIAL_ASSETS.stock.price, bond: INITIAL_ASSETS.bond.price },
   holdings: { stock: 0, bond: 0 },
   lastPriceDayIndex: stampFromMinutes(START_TOTAL_MINUTES).dayIndex,
@@ -406,13 +425,57 @@ export const useGame = create<GameState>((set, get) => ({
     const s = get()
     if (!s.hasCheckingAccount) return 'Employers want direct deposit — open checking at the bank first.'
     if (s.hasJob) return 'You already have this job.'
-    set({
-      hasJob: true,
-      career: 'Office Assistant',
-      weeklyIncome: 16 * 15,
-      nextPaydayAt: s.totalMinutes + 7 * MINUTES_PER_DAY,
-    })
+    if (!s.interviewActive) return 'Start the interview with Diane first.'
+    return 'Finish the interview questions first.'
+  },
+
+  beginInterview: () => {
+    const s = get()
+    if (s.hasJob) return 'You already work here.'
+    if (!s.hasCheckingAccount) return 'Direct deposit required — open a checking account at FirstCity Bank first.'
+    // Education gate: high-school grad is enough for this role; flag if somehow missing.
+    if (!/high school/i.test(s.education)) {
+      return 'This role requires a high school diploma (or equivalent).'
+    }
+    set({ interviewActive: true, interviewCorrect: 0, interviewAsked: 0 })
     return null
+  },
+  answerInterview: (correct) => {
+    const s = get()
+    if (!s.interviewActive) return
+    set({
+      interviewAsked: s.interviewAsked + 1,
+      interviewCorrect: s.interviewCorrect + (correct ? 1 : 0),
+    })
+  },
+  finishInterview: () => {
+    const s = get()
+    if (!s.interviewActive) return { hired: false, message: 'No interview in progress.' }
+    // Base chance from answers (3 questions): 0/3→15%, 1/3→40%, 2/3→70%, 3/3→90%
+    const rates = [0.15, 0.4, 0.7, 0.9]
+    const rate = rates[Math.min(3, s.interviewCorrect)] ?? 0.15
+    const roll = Math.random()
+    const hired = roll < rate
+    if (hired) {
+      set({
+        hasJob: true,
+        career: 'Office Assistant',
+        weeklyIncome: 16 * 15,
+        nextPaydayAt: s.totalMinutes + 7 * MINUTES_PER_DAY,
+        interviewActive: false,
+        interviewCorrect: 0,
+        interviewAsked: 0,
+      })
+      return {
+        hired: true,
+        message: `You’re hired as Office Assistant ($16/hr, 15 hrs/week). You got ${s.interviewCorrect}/3 interview answers right.`,
+      }
+    }
+    set({ interviewActive: false, interviewCorrect: 0, interviewAsked: 0 })
+    return {
+      hired: false,
+      message: `Not this time — you scored ${s.interviewCorrect}/3. Review the role and try applying again later.`,
+    }
   },
 
   addToCart: (item) => set({ cart: [...get().cart, item] }),
@@ -501,6 +564,7 @@ export const useGame = create<GameState>((set, get) => ({
     let ledger = prev.ledger
     let paystubs = prev.paystubs
     let nextPaydayAt = prev.nextPaydayAt
+    let dueBillIds = [...prev.dueBillIds]
     const recurringBills = prev.recurringBills.map((b) => ({ ...b }))
 
     // Paydays (weekly) — require checking for direct deposit
@@ -533,45 +597,13 @@ export const useGame = create<GameState>((set, get) => ({
       }
     }
 
+    // Queue due bills for Scenario resolution (do not silently auto-pay).
     for (const bill of recurringBills) {
-      let guard = 0
-      while (totalMinutes >= bill.nextDueTotalMinutes && guard++ < 6) {
-        const paid = takeFromLiquid({ bank, savings, cash }, bill.amount)
-        if (paid) {
-          bank = paid.bank
-          savings = paid.savings
-          cash = paid.cash
-          lastBillNotice = `Paid $${bill.amount} — ${bill.label}`
-          if (!creditEstablished) {
-            creditEstablished = true
-            creditScore = CREDIT_SCORE_ON_FILE + 4
-          } else {
-            creditScore = bumpCredit(creditScore, true, 4)
-          }
-          ledger = pushLedger(ledger, {
-            id: `led-${bill.id}-${bill.nextDueTotalMinutes}`,
-            atTotalMinutes: bill.nextDueTotalMinutes,
-            label: bill.label,
-            amount: bill.amount,
-            kind: 'bill',
-            status: 'paid',
-          })
-        } else {
-          debt += bill.amount
-          creditScore = bumpCredit(creditScore, creditEstablished || true, -10)
-          creditEstablished = true
-          recentlyMissedBill = true
-          lastBillNotice = `Missed $${bill.amount} — ${bill.label} (added to debt)`
-          ledger = pushLedger(ledger, {
-            id: `led-miss-${bill.id}-${bill.nextDueTotalMinutes}`,
-            atTotalMinutes: bill.nextDueTotalMinutes,
-            label: bill.label,
-            amount: bill.amount,
-            kind: 'bill',
-            status: 'missed',
-          })
+      if (totalMinutes >= bill.nextDueTotalMinutes && !dueBillIds.includes(bill.id)) {
+        dueBillIds.push(bill.id)
+        if (import.meta.env.DEV) {
+          console.debug('[bills] due', bill.id, bill.label, bill.amount, 'at', totalMinutes)
         }
-        bill.nextDueTotalMinutes += bill.everyDays * MINUTES_PER_DAY
       }
     }
 
@@ -583,6 +615,7 @@ export const useGame = create<GameState>((set, get) => ({
       incomeFactor,
       incomeFactorUntil: incomeFactor === 1 ? 0 : prev.incomeFactorUntil,
       recurringBills,
+      dueBillIds,
       bank,
       savings,
       cash,
@@ -713,6 +746,69 @@ export const useGame = create<GameState>((set, get) => ({
         if (activeScenarioId.includes('car-repair')) patch.transportationAvailable = false
         patch.creditScore = bumpCredit(state.creditScore, state.creditEstablished, -3)
         patch.recentlyMissedBill = true
+      }
+    }
+
+    const billPay = choice.effects.billPay
+    if (billPay) {
+      const bill = state.recurringBills.find((b) => b.id === billPay.billId)
+      if (bill) {
+        const amount = bill.amount
+        let paidOk = false
+        if (billPay.from === 'bank' && state.bank >= amount) {
+          patch.bank = state.bank - amount
+          paidOk = true
+        } else if (billPay.from === 'savings' && state.savings >= amount) {
+          patch.savings = state.savings - amount
+          paidOk = true
+        } else if (billPay.from === 'cash' && state.cash >= amount) {
+          patch.cash = state.cash - amount
+          paidOk = true
+        } else if (billPay.from !== 'miss') {
+          patch.scenarioWhyOverride = `Not enough in that account for $${amount}. The payment was missed and added to debt.`
+        }
+
+        const bills = state.recurringBills.map((b) =>
+          b.id === bill.id
+            ? { ...b, nextDueTotalMinutes: Math.max(b.nextDueTotalMinutes, state.totalMinutes) + b.everyDays * MINUTES_PER_DAY }
+            : b,
+        )
+        patch.recurringBills = bills
+        patch.dueBillIds = state.dueBillIds.filter((id) => id !== bill.id)
+
+        if (paidOk) {
+          patch.creditEstablished = true
+          patch.creditScore = state.creditEstablished
+            ? bumpCredit(state.creditScore, true, 4)
+            : CREDIT_SCORE_ON_FILE + 4
+          patch.lastBillNotice = `Paid $${amount} — ${bill.label}`
+          ledger = pushLedger(ledger, {
+            id: `led-${bill.id}-${state.totalMinutes}`,
+            atTotalMinutes: state.totalMinutes,
+            label: bill.label,
+            amount,
+            kind: 'bill',
+            status: 'paid',
+          })
+        } else {
+          patch.debt = (typeof patch.debt === 'number' ? patch.debt : state.debt) + amount
+          patch.creditEstablished = true
+          patch.creditScore = bumpCredit(state.creditEstablished ? state.creditScore : CREDIT_SCORE_ON_FILE, true, -12)
+          patch.recentlyMissedBill = true
+          patch.lastBillNotice = `Missed $${amount} — ${bill.label} (added to debt)`
+          if (!patch.scenarioWhyOverride) {
+            patch.scenarioWhyOverride =
+              'Missing rent/bills adds debt and hurts your credit. Catch up when you can.'
+          }
+          ledger = pushLedger(ledger, {
+            id: `led-miss-${bill.id}-${state.totalMinutes}`,
+            atTotalMinutes: state.totalMinutes,
+            label: bill.label,
+            amount,
+            kind: 'bill',
+            status: 'missed',
+          })
+        }
       }
     }
 
@@ -1004,9 +1100,62 @@ export const SCENE_LOCATION: Record<SceneId, string> = {
   home: 'Maple Apartments',
 }
 
+export function processDueBillsAsScenarios() {
+  const s = useGame.getState()
+  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue) return false
+  const billId = s.dueBillIds[0]
+  if (!billId) return false
+  const bill = s.recurringBills.find((b) => b.id === billId)
+  if (!bill) {
+    useGame.setState({ dueBillIds: s.dueBillIds.filter((id) => id !== billId) })
+    return false
+  }
+  const scenarioId = `bill-due-${bill.id}-${Math.floor(bill.nextDueTotalMinutes)}`
+  if (getScenario(scenarioId)) {
+    s.openScenario(scenarioId)
+    return true
+  }
+  registerRuntimeScenario({
+    id: scenarioId,
+    title: `${bill.label} due`,
+    badge: bill.category === 'rent' ? 'Rent due' : 'Bill due',
+    setup: `${bill.label} of $${bill.amount} is due now. How do you want to pay?`,
+    choices: [
+      {
+        id: 'bank',
+        label: `Pay $${bill.amount} from checking`,
+        effects: { billPay: { billId: bill.id, from: 'bank' } },
+        why: 'Paying on time from checking protects your credit and keeps housing stable.',
+      },
+      {
+        id: 'savings',
+        label: `Pay $${bill.amount} from savings`,
+        effects: { billPay: { billId: bill.id, from: 'savings' } },
+        why: 'Savings can cover a shortfall — but that’s your emergency cushion shrinking.',
+      },
+      {
+        id: 'cash',
+        label: `Pay $${bill.amount} in cash`,
+        effects: { billPay: { billId: bill.id, from: 'cash' } },
+        why: 'Cash works if you have it on hand. Keep a receipt habit.',
+      },
+      {
+        id: 'miss',
+        label: 'I can’t pay today',
+        effects: { billPay: { billId: bill.id, from: 'miss' } },
+        why: 'Missing a payment adds debt and hurts credit. Catch up as soon as you can.',
+      },
+    ],
+  })
+  if (import.meta.env.DEV) console.debug('[bills] opening scenario', scenarioId, bill.amount)
+  s.openScenario(scenarioId)
+  return true
+}
+
 export function fireRandomExpenseIfDue() {
   const s = useGame.getState()
-  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen) return false
+  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue) return false
+  if (s.dueBillIds.length > 0) return false // bills take priority
   if (s.totalMinutes < s.nextRandomExpenseAt) return false
   const rentAmount = s.recurringBills.find((b) => b.category === 'rent')?.amount ?? RENT_MONTHLY
   const ctx: ExpenseContext = {
@@ -1021,9 +1170,19 @@ export function fireRandomExpenseIfDue() {
   }
   const { scenario } = buildRandomExpenseScenario(s.totalMinutes, ctx)
   registerRuntimeScenario(scenario)
+  if (import.meta.env.DEV) {
+    console.debug(
+      '[expense] fire',
+      scenario.id,
+      'next in days≈',
+      ((rollNextExpenseAt(s.totalMinutes) - s.totalMinutes) / MINUTES_PER_DAY).toFixed(1),
+    )
+  }
   s.openScenario(scenario.id, `rand-expense-${scenario.id}`)
+  const count = s.randomExpenseCount + 1
   useGame.setState({
-    nextRandomExpenseAt: rollNextExpenseAt(s.totalMinutes),
+    nextRandomExpenseAt: rollNextExpenseAt(s.totalMinutes, { first: count === 0 }),
+    randomExpenseCount: count,
     recentlyMissedBill: scenario.id.includes('late-fee') ? false : s.recentlyMissedBill,
   })
   return true

@@ -3,7 +3,8 @@ import { stampFromMinutes, dayPhase } from './simulation/time'
 
 const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigits: 0 })}`
 
-const SCALES = [1, 8, 32] as const
+/** Review speeds only — default is always 1× (1 real min ≈ 1 game hour). */
+const SCALES = [1, 4] as const
 
 export function GameHUD() {
   const cash = useGame((s) => s.cash)
@@ -27,7 +28,7 @@ export function GameHUD() {
 
   const cycleScale = () => {
     const i = SCALES.indexOf(timeScale as (typeof SCALES)[number])
-    setTimeScale(SCALES[(i + 1) % SCALES.length])
+    setTimeScale(SCALES[i < 0 ? 0 : (i + 1) % SCALES.length])
   }
 
   return (
@@ -56,7 +57,7 @@ export function GameHUD() {
           <span className="hud-value">
             {cal.month}/{cal.dayOfMonth} {cal.clockLabel}
           </span>
-          <button type="button" className="hud-time-scale" onClick={cycleScale} title="Cycle time speed">
+          <button type="button" className="hud-time-scale" onClick={cycleScale} title="Time speed (1× default, 4× review)">
             {timeScale}×
           </button>
         </div>
