@@ -56,7 +56,9 @@ export function useInteractable(config: Omit<Interactable, 'id'> & { id?: string
 export function InteractionPrompt() {
   const prompt = useGame((s) => s.prompt)
   const dialogue = useGame((s) => s.dialogue)
-  if (!prompt || dialogue) return null
+  const scenario = useGame((s) => s.activeScenarioId)
+  const investing = useGame((s) => s.investingPanelOpen)
+  if (!prompt || dialogue || scenario || investing) return null
   return (
     <div className="interact-prompt">
       <span className="key">E</span> {prompt}

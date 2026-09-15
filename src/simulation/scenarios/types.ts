@@ -18,6 +18,15 @@ export interface ScenarioEffects {
     hasJob: boolean
     transportationAvailable: boolean
   }>
+  /** Surprise / life-event payment routing. */
+  payExpense?: {
+    amount: number
+    from: 'savings' | 'bank' | 'cash' | 'credit' | 'delay'
+  }
+  /** Car dealership outcome. */
+  carDeal?: 'buy' | 'lease' | 'pass'
+  /** Housing outcome at Maple Apartments. */
+  homeDeal?: 'buy' | 'keep-rent' | 'pass'
 }
 
 export interface ScenarioChoice {
@@ -40,7 +49,7 @@ export interface ScenarioDef {
   badge?: string
   /** 1–3 sentences of setup. */
   setup: string
-  choices: [ScenarioChoice, ScenarioChoice, ...ScenarioChoice[]]
+  choices: ScenarioChoice[]
   /** Optional curriculum linkage (progress wiring comes later). */
   unitNumber?: number
   topicId?: string

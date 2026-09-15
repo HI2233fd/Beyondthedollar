@@ -170,6 +170,80 @@ canvas {
   color: #05221a;
 }
 
+.hud-status {
+  min-width: 140px;
+}
+.hud-status-line {
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25;
+}
+.bill-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  z-index: 22;
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  background: rgba(15, 23, 42, 0.92);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.invest-card {
+  width: min(520px, 94vw);
+  background: linear-gradient(180deg, #1a2438, #0e1524);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  animation: pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.invest-summary {
+  display: flex;
+  gap: 18px;
+  margin: 12px 0 16px;
+}
+.invest-summary .hud-label {
+  margin-bottom: 2px;
+}
+.invest-list {
+  display: grid;
+  gap: 12px;
+}
+.invest-row {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+.invest-meta {
+  display: grid;
+  gap: 2px;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+.invest-meta strong {
+  color: var(--text);
+  font-size: 0.98rem;
+}
+.invest-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.invest-msg {
+  margin: 10px 0 0;
+  color: var(--accent-2);
+  font-size: 0.86rem;
+}
+
 /* ---------- Minimap ---------- */
 .minimap {
   position: absolute;

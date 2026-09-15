@@ -22,6 +22,7 @@ import { CurriculumHUD } from './CurriculumHUD'
 import { CityLighting } from './simulation/CityLighting'
 import { TimeSystem } from './simulation/TimeSystem'
 import { ScenarioPanel } from './simulation/ScenarioPanel'
+import { InvestingPanel } from './simulation/InvestingPanel'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -92,6 +93,7 @@ export function Game() {
   const lessonOpen = useGame((s) => s.activeLessonId)
   const quizOpen = useGame((s) => s.activeQuizId)
   const scenarioOpen = useGame((s) => s.activeScenarioId)
+  const investingOpen = useGame((s) => s.investingPanelOpen)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -124,7 +126,13 @@ export function Game() {
   }, [])
 
   const modalOpen =
-    !!dialogue || lifeActive || !!outcome || !!lessonOpen || !!quizOpen || !!scenarioOpen
+    !!dialogue ||
+    lifeActive ||
+    !!outcome ||
+    !!lessonOpen ||
+    !!quizOpen ||
+    !!scenarioOpen ||
+    investingOpen
   const showHint = !locked && !modalOpen
 
   return (
@@ -156,6 +164,7 @@ export function Game() {
         <LessonPanel />
         <QuizPanel />
         <ScenarioPanel />
+        <InvestingPanel />
         <LifeEventSystem />
         <TimeSystem />
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useGame } from '../GameState'
+import { fireRandomExpenseIfDue, useGame } from '../GameState'
 import { DEFAULT_GAME_MINUTES_PER_REAL_SECOND } from './time'
 import { CALENDAR_TRIGGERS } from './scenarios'
 
@@ -12,13 +12,13 @@ function shouldPauseTime(): boolean {
     !!s.activeLessonId ||
     !!s.activeQuizId ||
     !!s.activeScenarioId ||
+    s.investingPanelOpen ||
     s.transitioning
   )
 }
 
 /**
- * Advances the game clock and fires once-only calendar scenario triggers.
- * Pauses while any modal/decision is open.
+ * Advances the game clock, fires calendar scenarios, and rolls random life expenses.
  */
 export function TimeSystem() {
   const lastTs = useRef<number | null>(null)
@@ -36,9 +36,9 @@ export function TimeSystem() {
         if (advance > 0) {
           useGame.getState().advanceTime(advance)
           maybeFireCalendarTriggers()
+          fireRandomExpenseIfDue()
         }
       } else if (shouldPauseTime()) {
-        // Don't accumulate a huge jump when unpausing.
         lastTs.current = now
       }
 
@@ -59,7 +59,7 @@ function maybeFireCalendarTriggers() {
     if (tr.once !== false && s.firedTriggerIds.includes(tr.id)) continue
     if (s.totalMinutes >= tr.atTotalMinutes) {
       s.openScenario(tr.scenarioId, tr.id)
-      return // one interruption at a time
+      return
     }
   }
 }

@@ -2,18 +2,23 @@ import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Chair, Plant, Rug, WallClock } from '../props'
 import { LearningStation } from '../curriculum/LearningStation'
-import type { Dialogue } from '../GameState'
+import { KioskStation } from '../simulation/KioskStation'
+import { useGame, type Dialogue } from '../GameState'
 
 function homeDialogue(): Dialogue {
+  const home = useGame.getState().homeStatus
   return {
     name: 'Roommate — Jordan',
-    text: 'Hey! The LEARN desk has course lessons for home topics — insurance, housing, cars, and scams. Want a tip while you are here?',
+    text:
+      home === 'owned'
+        ? 'Wild that we bought this place. Check the housing tablet if you want the payment breakdown.'
+        : 'Hey! AutoMart tablet for cars, housing tablet for rent-vs-buy, and LEARN for course stuff.',
     options: [
       {
         label: 'Any money tip?',
         next: {
           name: 'Roommate — Jordan',
-          text: 'Keep important mail (lease, insurance cards) in one folder. Scammers love chaos — organized people catch weird charges faster.',
+          text: 'Keep lease/mortgage papers in one folder. Surprise bills hurt less when you can find your stuff.',
           options: [{ label: 'Thanks', close: true }],
         },
       },
@@ -22,7 +27,7 @@ function homeDialogue(): Dialogue {
   }
 }
 
-/** Home apartment interior — hosts Units 17–19 and 21 learning station. */
+/** Home apartment — car/home purchase kiosks (no new exterior geometry). */
 export function HomeInterior() {
   return (
     <Room w={12} d={11} floor="#d6cfc4" wall="#f3efe8">
@@ -50,6 +55,26 @@ export function HomeInterior() {
       />
 
       <LearningStation buildingId="home" scene="home" position={[-3.5, 0, 2.8]} />
+      <KioskStation
+        id="home-automart"
+        scene="home"
+        position={[4.2, 0, -2.8]}
+        label="AUTOMART"
+        prompt="Browse car deals"
+        color="#7c2d12"
+        emissive="#fb923c"
+        onOpen={() => useGame.getState().openCarDealScenario()}
+      />
+      <KioskStation
+        id="home-housing"
+        scene="home"
+        position={[-4.4, 0, -1.2]}
+        label="HOUSING"
+        prompt="Rent vs buy options"
+        color="#1e3a5f"
+        emissive="#93c5fd"
+        onOpen={() => useGame.getState().openHomeDealScenario()}
+      />
       <InteriorExit scene="home" />
     </Room>
   )

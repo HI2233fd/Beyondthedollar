@@ -2,15 +2,16 @@ import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Guest, Chair, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
-import { useGame, type Dialogue } from '../GameState'
 import { LearningStation } from '../curriculum/LearningStation'
+import { KioskStation } from '../simulation/KioskStation'
+import { useGame, type Dialogue } from '../GameState'
 
 function bankDialogue(): Dialogue {
   const g = useGame.getState()
   const leave = { label: 'Leave', close: true as const }
   return {
     name: 'Bank Teller — Marcus',
-    text: 'Welcome. Are you looking to manage your money or learn about your options?',
+    text: 'Welcome. Checking, savings, or the invest desk on your left?',
     options: [
       {
         label: 'Open a savings account',
@@ -22,19 +23,29 @@ function bankDialogue(): Dialogue {
         },
       },
       {
-        label: 'Learn about credit cards',
+        label: 'Deposit $100 to checking',
+        action: () => useGame.getState().deposit(100),
         next: {
           name: 'Bank Teller — Marcus',
-          text: 'A credit card lets you borrow up to a limit. Pay the full balance each month and you build credit for free. Carry a balance and you pay interest (APR) — often 20%+.',
+          text: `Deposited $100. ${g.cash < 100 ? 'That was most of your cash — nicely done.' : 'Your money is safe with us.'}`,
           options: [leave],
         },
       },
       {
-        label: 'Deposit money',
-        action: () => useGame.getState().deposit(100),
+        label: 'Withdraw $50 cash',
+        action: () => useGame.getState().withdraw(50),
         next: {
           name: 'Bank Teller — Marcus',
-          text: `I deposited $100 into your checking/bank balance. ${g.cash < 100 ? 'Looked like that was most of your cash — nicely done.' : 'Your money is safe with us.'}`,
+          text: 'Here’s $50 from checking.',
+          options: [leave],
+        },
+      },
+      {
+        label: 'Move $100 checking → savings',
+        action: () => useGame.getState().transferToSavings(100),
+        next: {
+          name: 'Bank Teller — Marcus',
+          text: 'Transferred $100 into savings.',
           options: [leave],
         },
       },
@@ -141,6 +152,16 @@ export function BankInterior() {
 
 
       <LearningStation buildingId="bank" scene="bank" position={[-6.5, 0, -1.2]} />
+      <KioskStation
+        id="bank-invest"
+        scene="bank"
+        position={[5.8, 0, 2.4]}
+        label="INVEST"
+        prompt="Open invest desk"
+        color="#0f766e"
+        emissive="#34d399"
+        onOpen={() => useGame.getState().openInvestingPanel()}
+      />
       <InteriorExit scene="bank" />
     </Room>
   )

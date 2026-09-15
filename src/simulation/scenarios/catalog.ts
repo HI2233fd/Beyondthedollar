@@ -1,8 +1,19 @@
 import type { ScenarioDef, ScenarioTrigger } from './types'
 
+/** Runtime (generated) scenarios — random expenses, one-off notices. */
+const runtimeScenarios = new Map<string, ScenarioDef>()
+
+export function registerRuntimeScenario(def: ScenarioDef) {
+  runtimeScenarios.set(def.id, def)
+}
+
+export function clearRuntimeScenario(id: string) {
+  runtimeScenarios.delete(id)
+}
+
 /**
- * Seed catalog for the Scenario pattern review.
- * Full unit conversion comes after the time + pop-up pattern is approved.
+ * Seed catalog + major purchase scenarios.
+ * Random expenses are registered at fire-time via registerRuntimeScenario.
  */
 export const SCENARIOS: Record<string, ScenarioDef> = {
   'demo-opportunity-cost': {
@@ -63,10 +74,85 @@ export const SCENARIOS: Record<string, ScenarioDef> = {
       },
     ],
   },
+  'car-buy-vs-lease': {
+    id: 'car-buy-vs-lease',
+    title: 'AutoMart deal sheet',
+    badge: 'Decision',
+    unitNumber: 19,
+    topicId: 'unit-19-t1',
+    setup:
+      'A used hatchback lists at $12,000. Buy: $2,000 down + ~$280/mo loan (48 mo) + $110 insurance + $40 upkeep. Lease: $249/mo + $110 insurance, no equity.',
+    choices: [
+      {
+        id: 'buy',
+        label: 'Buy — $2,000 down + $280/mo loan',
+        effects: { carDeal: 'buy' },
+        why: 'Buying costs more monthly at first, but payments build ownership. Insurance and maintenance still hit every month.',
+      },
+      {
+        id: 'lease',
+        label: 'Lease — $249/mo + insurance',
+        effects: { carDeal: 'lease' },
+        why: 'Leasing keeps the payment lower and the car newer, but you never own it and mileage rules apply.',
+      },
+      {
+        id: 'pass',
+        label: 'Walk away for now',
+        effects: { carDeal: 'pass' },
+        why: 'Skipping a car avoids new bills. Transit or rideshares may cost less until income is steadier.',
+      },
+    ],
+  },
+  'home-rent-vs-buy': {
+    id: 'home-rent-vs-buy',
+    title: 'Maple Apartments — rent or buy?',
+    badge: 'Decision',
+    unitNumber: 20,
+    topicId: 'unit-20-t1',
+    setup:
+      'Your unit can stay a $900/mo rental, or you can buy it: $15,000 down, then ~$1,050 mortgage + $150 tax + $100 upkeep each month. Lenders want a credit score of at least 640.',
+    choices: [
+      {
+        id: 'buy',
+        label: 'Buy — $15,000 down + mortgage bundle',
+        effects: { homeDeal: 'buy' },
+        why: 'Buying replaces rent with mortgage, tax, and upkeep. You build equity if you keep up payments — and take on repair risk.',
+      },
+      {
+        id: 'rent',
+        label: 'Keep renting at $900/mo',
+        effects: { homeDeal: 'keep-rent' },
+        why: 'Renting keeps housing flexible and the landlord handles big repairs, but payments don’t build ownership.',
+      },
+      {
+        id: 'pass',
+        label: 'Not ready — revisit later',
+        effects: { homeDeal: 'pass' },
+        why: 'Waiting is fine if the down payment or credit score isn’t there yet. Revisit when the numbers work.',
+      },
+    ],
+  },
+  'investing-intro': {
+    id: 'investing-intro',
+    title: 'FirstCity Invest desk',
+    badge: 'Tip',
+    unitNumber: 14,
+    topicId: 'unit-14-t1',
+    setup:
+      'You can buy a higher-risk stock fund or a steadier bond fund. Prices move with game days — watch your portfolio instead of memorizing jargon.',
+    choices: [
+      {
+        id: 'got-it',
+        label: 'Open the invest desk',
+        effects: { stats: {} },
+        why: 'Higher potential return usually means bumpier prices. Bonds move less; stocks swing more.',
+      },
+    ],
+  },
 }
 
 export function getScenario(id: string): ScenarioDef | undefined {
-  return SCENARIOS[id]
+  return SCENARIOS[id] ?? runtimeScenarios.get(id)
 }
 
 /** Calendar demos: morning trade-off, then a mid-morning price notice. */
@@ -75,14 +161,14 @@ export const CALENDAR_TRIGGERS: ScenarioTrigger[] = [
     id: 'cal-demo-opportunity',
     kind: 'calendar',
     scenarioId: 'demo-opportunity-cost',
-    atTotalMinutes: 8 * 60 + 25, // 08:25 day 0
+    atTotalMinutes: 8 * 60 + 25,
     once: true,
   },
   {
     id: 'cal-demo-price',
     kind: 'calendar',
     scenarioId: 'demo-price-spike',
-    atTotalMinutes: 8 * 60 + 90, // 09:30 day 0
+    atTotalMinutes: 8 * 60 + 90,
     once: true,
   },
 ]

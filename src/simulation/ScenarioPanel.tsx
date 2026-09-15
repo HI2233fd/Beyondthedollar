@@ -3,11 +3,11 @@ import { getScenario } from './scenarios'
 
 /**
  * Decision pop-up: short setup → choices → immediate effects → "here's why".
- * Feels like an interruption, not a curriculum article.
  */
 export function ScenarioPanel() {
   const scenarioId = useGame((s) => s.activeScenarioId)
   const choiceId = useGame((s) => s.scenarioChoiceId)
+  const whyOverride = useGame((s) => s.scenarioWhyOverride)
   const choose = useGame((s) => s.chooseScenarioOption)
   const dismiss = useGame((s) => s.dismissScenario)
 
@@ -23,7 +23,7 @@ export function ScenarioPanel() {
         <div className="scenario-card">
           <div className="scenario-badge outcome">Here’s why</div>
           <h2 className="scenario-title">{scenario.title}</h2>
-          <p className="scenario-why">{chosen.why}</p>
+          <p className="scenario-why">{whyOverride ?? chosen.why}</p>
           <button type="button" className="scenario-continue" onClick={dismiss}>
             Continue
           </button>

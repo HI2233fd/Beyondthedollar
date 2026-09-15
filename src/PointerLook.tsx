@@ -23,7 +23,8 @@ export function PointerLook() {
         s.transitioning ||
         s.activeLessonId ||
         s.activeQuizId ||
-        s.activeScenarioId
+        s.activeScenarioId ||
+        s.investingPanelOpen
       )
         return
       if (document.pointerLockElement !== el) el.requestPointerLock?.()
@@ -49,7 +50,8 @@ export function PointerLook() {
         s.lifeEventOutcome ||
         s.activeLessonId ||
         s.activeQuizId ||
-        s.activeScenarioId
+        s.activeScenarioId ||
+        s.investingPanelOpen
       if (modal && document.pointerLockElement === el) {
         document.exitPointerLock?.()
       }
