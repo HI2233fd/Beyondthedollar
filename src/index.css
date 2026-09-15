@@ -67,6 +67,108 @@ canvas {
   color: var(--accent-2);
   font-size: 0.98rem;
 }
+.hud-time {
+  position: relative;
+  min-width: 128px;
+  pointer-events: auto;
+}
+.hud-time .hud-value {
+  font-size: 0.98rem;
+  letter-spacing: 0.02em;
+}
+.hud-time-scale {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.hud-time-scale:hover {
+  color: var(--text);
+  border-color: var(--accent-2);
+}
+
+/* ---------- Scenario decision pop-up ---------- */
+.scenario-overlay {
+  z-index: 36;
+}
+.scenario-card {
+  width: min(440px, 92vw);
+  background: linear-gradient(180deg, #1a2438, #0e1524);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 22px 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  animation: pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  text-align: left;
+}
+.scenario-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #fde68a;
+  background: rgba(253, 230, 138, 0.12);
+  border: 1px solid rgba(253, 230, 138, 0.28);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.scenario-badge.outcome {
+  color: var(--accent);
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.28);
+}
+.scenario-title {
+  margin: 10px 0 8px;
+  font-size: 1.28rem;
+}
+.scenario-setup,
+.scenario-why {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+.scenario-why {
+  color: var(--text);
+}
+.scenario-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+.scenario-btn {
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.scenario-btn:hover {
+  border-color: var(--accent-2);
+  background: rgba(56, 189, 248, 0.12);
+}
+.scenario-continue {
+  margin-top: 16px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 800;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #05221a;
+}
 
 /* ---------- Minimap ---------- */
 .minimap {

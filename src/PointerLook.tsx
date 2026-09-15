@@ -22,7 +22,8 @@ export function PointerLook() {
         s.lifeEventOutcome ||
         s.transitioning ||
         s.activeLessonId ||
-        s.activeQuizId
+        s.activeQuizId ||
+        s.activeScenarioId
       )
         return
       if (document.pointerLockElement !== el) el.requestPointerLock?.()
@@ -43,7 +44,12 @@ export function PointerLook() {
     // Release the mouse when a modal/dialogue/lesson opens.
     const unsub = useGame.subscribe((s) => {
       const modal =
-        s.dialogue || s.lifeEventActive || s.lifeEventOutcome || s.activeLessonId || s.activeQuizId
+        s.dialogue ||
+        s.lifeEventActive ||
+        s.lifeEventOutcome ||
+        s.activeLessonId ||
+        s.activeQuizId ||
+        s.activeScenarioId
       if (modal && document.pointerLockElement === el) {
         document.exitPointerLock?.()
       }

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { CURRICULUM, unlockedAfterCompleting } from './curriculum'
+import { START_TOTAL_MINUTES } from './simulation/time'
+import { getScenario, type ScenarioStat } from './simulation/scenarios'
 
 export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
 
@@ -72,6 +74,19 @@ interface GameState {
   quizAnswers: Record<string, number>
   quizSubmitted: boolean
 
+  // --- Simulation clock ---
+  /** Absolute game minutes since epoch (day 0 00:00). */
+  totalMinutes: number
+  /** Multiplier for review / fast-forward (1, 8, 32…). */
+  timeScale: number
+
+  // --- Scenarios (decision pop-ups) ---
+  activeScenarioId: string | null
+  scenarioChoiceId: string | null
+  firedTriggerIds: string[]
+  /** Scenarios the player has completed at least once (future progress metric). */
+  engagedScenarioIds: string[]
+
   // --- actions ---
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
@@ -97,6 +112,12 @@ interface GameState {
   answerQuiz: (questionId: string, choiceIndex: number) => void
   submitQuiz: () => void
   closeQuiz: () => void
+
+  advanceTime: (deltaMinutes: number) => void
+  setTimeScale: (scale: number) => void
+  openScenario: (scenarioId: string, triggerId?: string) => void
+  chooseScenarioOption: (choiceId: string) => void
+  dismissScenario: () => void
 }
 
 export const useGame = create<GameState>((set, get) => ({
@@ -132,6 +153,14 @@ export const useGame = create<GameState>((set, get) => ({
   activeQuizId: null,
   quizAnswers: {},
   quizSubmitted: false,
+
+  totalMinutes: START_TOTAL_MINUTES,
+  timeScale: 1,
+
+  activeScenarioId: null,
+  scenarioChoiceId: null,
+  firedTriggerIds: [],
+  engagedScenarioIds: [],
 
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
@@ -220,6 +249,64 @@ export const useGame = create<GameState>((set, get) => ({
     })
   },
   closeQuiz: () => set({ activeQuizId: null, quizAnswers: {}, quizSubmitted: false }),
+
+  advanceTime: (deltaMinutes) => {
+    if (deltaMinutes <= 0) return
+    set({ totalMinutes: get().totalMinutes + deltaMinutes })
+  },
+  setTimeScale: (scale) => set({ timeScale: Math.max(0, scale) }),
+
+  openScenario: (scenarioId, triggerId) => {
+    if (!getScenario(scenarioId)) return
+    if (get().activeScenarioId) return
+    set((s) => ({
+      activeScenarioId: scenarioId,
+      scenarioChoiceId: null,
+      dialogue: null,
+      prompt: null,
+      firedTriggerIds:
+        triggerId && !s.firedTriggerIds.includes(triggerId)
+          ? [...s.firedTriggerIds, triggerId]
+          : s.firedTriggerIds,
+    }))
+  },
+  chooseScenarioOption: (choiceId) => {
+    const { activeScenarioId } = get()
+    if (!activeScenarioId || get().scenarioChoiceId) return
+    const scenario = getScenario(activeScenarioId)
+    const choice = scenario?.choices.find((c) => c.id === choiceId)
+    if (!choice) return
+
+    const patch: Partial<GameState> = { scenarioChoiceId: choiceId }
+    const stats = choice.effects.stats
+    if (stats) {
+      ;(Object.keys(stats) as ScenarioStat[]).forEach((key) => {
+        const delta = stats[key]
+        if (delta == null) return
+        const cur = get()[key]
+        if (typeof cur === 'number') {
+          ;(patch as Record<string, number>)[key] = cur + delta
+        }
+      })
+    }
+    const flags = choice.effects.flags
+    if (flags) {
+      if (flags.hasJob != null) patch.hasJob = flags.hasJob
+      if (flags.transportationAvailable != null) patch.transportationAvailable = flags.transportationAvailable
+    }
+    set(patch)
+  },
+  dismissScenario: () => {
+    const { activeScenarioId, engagedScenarioIds } = get()
+    if (!activeScenarioId) return
+    set({
+      activeScenarioId: null,
+      scenarioChoiceId: null,
+      engagedScenarioIds: engagedScenarioIds.includes(activeScenarioId)
+        ? engagedScenarioIds
+        : [...engagedScenarioIds, activeScenarioId],
+    })
+  },
 }))
 
 export const SCENE_LOCATION: Record<SceneId, string> = {

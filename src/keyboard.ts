@@ -22,7 +22,8 @@ export function initControls() {
     }
     if (e.code === 'Escape') {
       const g = useGame.getState()
-      if (g.activeQuizId) g.closeQuiz()
+      if (g.activeScenarioId && g.scenarioChoiceId) g.dismissScenario()
+      else if (g.activeQuizId) g.closeQuiz()
       else if (g.activeLessonId) g.closeLesson()
       else g.closeDialogue()
     }
@@ -53,6 +54,7 @@ export function movementLocked(): boolean {
     s.lifeEventActive ||
     !!s.lifeEventOutcome ||
     !!s.activeLessonId ||
-    !!s.activeQuizId
+    !!s.activeQuizId ||
+    !!s.activeScenarioId
   )
 }

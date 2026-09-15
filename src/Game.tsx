@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Sky } from '@react-three/drei'
 import type { Group } from 'three'
 import { RigContext, type PlayerRig } from './rig'
 import { Player } from './Player'
@@ -20,6 +19,9 @@ import { LifeEventSystem } from './LifeEventSystem'
 import { LessonPanel } from './LessonPanel'
 import { QuizPanel } from './QuizPanel'
 import { CurriculumHUD } from './CurriculumHUD'
+import { CityLighting } from './simulation/CityLighting'
+import { TimeSystem } from './simulation/TimeSystem'
+import { ScenarioPanel } from './simulation/ScenarioPanel'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -89,6 +91,7 @@ export function Game() {
   const outcome = useGame((s) => s.lifeEventOutcome)
   const lessonOpen = useGame((s) => s.activeLessonId)
   const quizOpen = useGame((s) => s.activeQuizId)
+  const scenarioOpen = useGame((s) => s.activeScenarioId)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -98,6 +101,8 @@ export function Game() {
   useEffect(() => {
     initControls()
     useGame.setState({ spawn: CITY_START, scene: 'city' })
+    // Dev/review hook so browser automation shares the live store
+    ;(window as unknown as { __useGame?: typeof useGame }).__useGame = useGame
   }, [])
 
   // fade + finish transition on scene change
@@ -118,7 +123,8 @@ export function Game() {
     return () => document.removeEventListener('pointerlockchange', onChange)
   }, [])
 
-  const modalOpen = !!dialogue || lifeActive || !!outcome || !!lessonOpen || !!quizOpen
+  const modalOpen =
+    !!dialogue || lifeActive || !!outcome || !!lessonOpen || !!quizOpen || !!scenarioOpen
   const showHint = !locked && !modalOpen
 
   return (
@@ -126,23 +132,7 @@ export function Game() {
       <div className="game-root">
         <Canvas shadows camera={{ position: [-2, 4, 16], fov: 55 }} dpr={[1, 1.5]}>
           {scene === 'city' ? (
-            <>
-              <Sky sunPosition={[40, 25, 20]} turbidity={6} rayleigh={1.2} />
-              <fog attach="fog" args={['#cdd8e6', 45, 120]} />
-              <hemisphereLight args={['#dce8ff', '#4a5a44', 0.7]} />
-              <directionalLight
-                position={[30, 40, 20]}
-                intensity={2.1}
-                castShadow
-                shadow-mapSize-width={2048}
-                shadow-mapSize-height={2048}
-                shadow-camera-left={-60}
-                shadow-camera-right={60}
-                shadow-camera-top={60}
-                shadow-camera-bottom={-60}
-                shadow-camera-far={140}
-              />
-            </>
+            <CityLighting />
           ) : (
             <>
               <color attach="background" args={['#0b0f16']} />
@@ -165,7 +155,9 @@ export function Game() {
         <DialogueSystem />
         <LessonPanel />
         <QuizPanel />
+        <ScenarioPanel />
         <LifeEventSystem />
+        <TimeSystem />
 
         {showHint && (
           <div className="controls-hint">
