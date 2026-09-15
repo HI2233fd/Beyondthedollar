@@ -11,8 +11,9 @@ export function DialogueSystem() {
     const before = useGame.getState().dialogue
     opt.action?.()
     const after = useGame.getState().dialogue
-    // Action may replace the dialogue (e.g. gated bank/job decisions).
-    if (after && after !== before) return
+    // Action may replace or clear dialogue (hire result, credit decision, etc.).
+    // Compare by identity — do not require `after` truthy or we can wipe a fresh result.
+    if (after !== before) return
     if (opt.next) openDialogue(opt.next)
     else if (opt.close || !opt.next) closeDialogue()
   }

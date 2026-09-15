@@ -99,6 +99,13 @@ export function BankInterior() {
       extraBoxes={[box(0, -3.4, 9, 1), box(-6.6, 3.2, 1.4, 4), box(6.6, -2, 1.2, 3)]}
     >
       <Rug position={[0, 0.02, 1.5]} size={[9, 5]} color="#8399bd" />
+      <Rug position={[5.2, 0.02, -1.2]} size={[3.2, 2.4]} color="#94a3b8" />
+
+      {/* Marble floor accent strip */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.015, -1.2]} receiveShadow>
+        <planeGeometry args={[14, 0.55]} />
+        <meshStandardMaterial color="#cbd5e1" metalness={0.2} roughness={0.35} />
+      </mesh>
 
       <mesh position={[0, 0.6, -3.4]} castShadow>
         <boxGeometry args={[9, 1.2, 1]} />
@@ -108,6 +115,13 @@ export function BankInterior() {
         <boxGeometry args={[9, 0.1, 1.2]} />
         <meshStandardMaterial color="#3f2d18" />
       </mesh>
+      {/* Teller nameplates */}
+      {[-3, 0, 3].map((x) => (
+        <mesh key={`np${x}`} position={[x, 1.42, -2.95]}>
+          <boxGeometry args={[1.1, 0.12, 0.04]} />
+          <meshStandardMaterial color="#0f172a" emissive="#0369a1" emissiveIntensity={0.2} />
+        </mesh>
+      ))}
       {[-3, 0, 3].map((x) => (
         <mesh key={x} position={[x, 1.9, -3.4]}>
           <boxGeometry args={[0.06, 1.1, 1]} />

@@ -1,9 +1,11 @@
 import { useEffect, useMemo } from 'react'
 import { Building } from './Buildings/Building'
-import { Car, Streetlight, Tree, Pedestrian } from './props'
+import { Car, Streetlight, Tree, Pedestrian, Bench, Mailbox, Planter } from './props'
 import { BUILDINGS, cityCollision, WORLD } from './cityLayout'
 import { box } from './collision'
 import { setActiveBoxes } from './world'
+import { useGame } from './GameState'
+import { dayPhase, stampFromMinutes } from './simulation/time'
 
 const ROAD_HALF = 4.5
 const SIDEWALK_OUTER = 8
@@ -31,6 +33,9 @@ const PARKED_CARS: { x: number; z: number; color: string; rot?: number }[] = [
 ]
 
 export function City() {
+  const totalMinutes = useGame((s) => s.totalMinutes)
+  const night = dayPhase(stampFromMinutes(totalMinutes).minuteOfDay) === 'night'
+
   useEffect(() => {
     const carBoxes = PARKED_CARS.map((c) =>
       c.rot === 0 ? box(c.x, c.z, 2.0, 4.4) : box(c.x, c.z, 4.4, 2.0),
@@ -53,17 +58,25 @@ export function City() {
   const streetProps = useMemo(() => {
     const lights: { x: number; z: number }[] = []
     const trees: { x: number; z: number }[] = []
+    const benches: { x: number; z: number; rot: number }[] = []
+    const mailboxes: { x: number; z: number }[] = []
+    const planters: { x: number; z: number }[] = []
     for (let x = WORLD.minX + 6; x <= WORLD.maxX - 6; x += 14) {
       lights.push({ x, z: -SIDEWALK_OUTER + 0.6 })
       lights.push({ x: x + 7, z: SIDEWALK_OUTER - 0.6 })
       trees.push({ x: x + 3, z: -SIDEWALK_OUTER - 2.5 })
       trees.push({ x: x + 5, z: SIDEWALK_OUTER + 2.5 })
+      benches.push({ x: x + 1, z: -SIDEWALK_OUTER + 1.4, rot: 0 })
+      benches.push({ x: x + 5, z: SIDEWALK_OUTER - 1.4, rot: Math.PI })
+      planters.push({ x: x + 8, z: -SIDEWALK_OUTER + 1.1 })
+      planters.push({ x: x + 2, z: SIDEWALK_OUTER - 1.1 })
     }
     for (let z = WORLD.minZ + 8; z <= WORLD.maxZ - 8; z += 14) {
       lights.push({ x: -NS_ROAD_HALF - 3.2, z })
       lights.push({ x: NS_ROAD_HALF + 3.2, z: z + 7 })
       trees.push({ x: -NS_ROAD_HALF - 5, z: z + 2 })
       trees.push({ x: NS_ROAD_HALF + 5, z: z + 4 })
+      mailboxes.push({ x: NS_ROAD_HALF + 3.6, z: z + 1 })
     }
     // pocket parks / corner greens
     for (const p of [
@@ -76,8 +89,9 @@ export function City() {
     ] as [number, number][]) {
       trees.push({ x: p[0], z: p[1] })
       trees.push({ x: p[0] + 3, z: p[1] + 2 })
+      planters.push({ x: p[0] + 1.5, z: p[1] - 1.5 })
     }
-    return { lights, trees }
+    return { lights, trees, benches, mailboxes, planters }
   }, [])
 
   const worldW = WORLD.maxX - WORLD.minX + 4
@@ -85,11 +99,22 @@ export function City() {
 
   return (
     <group>
-      {/* Grass base */}
+      {/* Grass base with slight tone variation patches */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
         <planeGeometry args={[worldW + 24, worldD + 24]} />
         <meshStandardMaterial color="#3f5e3a" roughness={1} />
       </mesh>
+      {[
+        [-40, -28],
+        [36, 30],
+        [-28, 32],
+        [42, -26],
+      ].map(([x, z], i) => (
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, -0.015, z]} receiveShadow>
+          <circleGeometry args={[6 + (i % 3), 16]} />
+          <meshStandardMaterial color={i % 2 ? '#4a6e42' : '#355434'} roughness={1} />
+        </mesh>
+      ))}
 
       {/* East-west avenue */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -202,10 +227,19 @@ export function City() {
       ))}
 
       {streetProps.lights.map((l, i) => (
-        <Streetlight key={`l${i}`} position={[l.x, 0, l.z]} />
+        <Streetlight key={`l${i}`} position={[l.x, 0, l.z]} night={night} />
       ))}
       {streetProps.trees.map((t, i) => (
         <Tree key={`t${i}`} position={[t.x, 0, t.z]} />
+      ))}
+      {streetProps.benches.map((b, i) => (
+        <Bench key={`bn${i}`} position={[b.x, 0, b.z]} rotation={b.rot} />
+      ))}
+      {streetProps.mailboxes.map((m, i) => (
+        <Mailbox key={`mb${i}`} position={[m.x, 0, m.z]} />
+      ))}
+      {streetProps.planters.map((p, i) => (
+        <Planter key={`pl${i}`} position={[p.x, 0, p.z]} />
       ))}
 
       <Pedestrian position={[-20, 0, 6.5]} range={14} speed={1.0} phase={0} shirt="#ef4444" />

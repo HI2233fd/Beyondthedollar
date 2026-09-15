@@ -1,21 +1,35 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
-import { Guest, Plant, WallClock } from '../props'
+import { Chair, Guest, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue, type DialogueOption } from '../GameState'
 import { LearningStation } from '../curriculum/LearningStation'
+import { stampFromMinutes } from '../simulation/time'
 
 const NAME = 'Manager — Diane'
 
+function stampLabel(totalMinutes: number) {
+  const s = stampFromMinutes(totalMinutes)
+  return `${s.weekday} ${s.month}/${s.dayOfMonth} ${s.clockLabel}`
+}
+
 function showResult() {
   const result = useGame.getState().finishInterview()
-  useGame.setState({
+  // Single write for dialogue + hire flags so Phone/HUD never lag behind Diane’s message.
+  useGame.setState((s) => ({
     dialogue: {
       name: NAME,
       text: result.message,
-      options: [{ label: result.hired ? 'Thanks!' : 'I’ll try again later', close: true }],
+      options: [{ label: result.hired ? 'Thanks — I’ll check my Phone' : 'I’ll try again later', close: true }],
     },
-  })
+    ...(result.hired
+      ? {
+          hasJob: true,
+          career: 'Office Assistant' as const,
+          weeklyIncome: Math.max(s.weeklyIncome, 16 * 15),
+        }
+      : {}),
+  }))
 }
 
 function q3(): Dialogue {
@@ -114,9 +128,10 @@ function officeDialogue(): Dialogue {
 
   if (g.hasJob) {
     const weekly = Math.round(g.weeklyIncome * g.incomeFactor)
+    const pay = stampLabel(g.nextPaydayAt)
     return {
       name: NAME,
-      text: `Good to see you! Office Assistant at $16/hour. This week’s expected gross is about $${weekly} before taxes — stubs are on your phone.`,
+      text: `You’re on the roster as ${g.career}. Expected gross ~$${weekly}/week before tax. Next direct deposit lands around ${pay}. Paystubs live on your Phone → Bills / Pay.`,
       options: [leave],
     }
   }
@@ -177,9 +192,33 @@ export function OfficeInterior() {
       wall="#dfe6ee"
       extraBoxes={deskPos.map(([x, z]) => box(x, z, 2.2, 1.1))}
     >
+      <Rug position={[0, 0.02, 3.2]} size={[5.5, 3.2]} color="#334155" />
+
+      {/* Accent stripe + frosted glass wall */}
+      <mesh position={[0, 0.35, -6.7]}>
+        <boxGeometry args={[14.5, 0.7, 0.08]} />
+        <meshStandardMaterial color="#1d4ed8" emissive="#1e3a8a" emissiveIntensity={0.25} />
+      </mesh>
       <mesh position={[0, 2.2, -6.7]}>
         <planeGeometry args={[14, 3.4]} />
         <meshStandardMaterial color="#bfe3ff" metalness={0.5} roughness={0.1} transparent opacity={0.5} />
+      </mesh>
+      {/* Window mullions */}
+      {[-4.5, -1.5, 1.5, 4.5].map((x) => (
+        <mesh key={x} position={[x, 2.2, -6.68]}>
+          <boxGeometry args={[0.08, 3.4, 0.04]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.4} />
+        </mesh>
+      ))}
+
+      {/* Reception counter */}
+      <mesh position={[0, 0.55, 4.6]} castShadow>
+        <boxGeometry args={[4.8, 1.1, 0.9]} />
+        <meshStandardMaterial color="#64748b" roughness={0.55} />
+      </mesh>
+      <mesh position={[0, 1.15, 4.6]}>
+        <boxGeometry args={[4.8, 0.08, 1.05]} />
+        <meshStandardMaterial color="#e2e8f0" />
       </mesh>
 
       {deskPos.map(([x, z], i) => (
@@ -198,14 +237,34 @@ export function OfficeInterior() {
             <boxGeometry args={[0.9, 0.55, 0.06]} />
             <meshStandardMaterial color="#0b1220" emissive="#1e3a5f" emissiveIntensity={0.5} />
           </mesh>
+          {/* keyboard + mug */}
+          <mesh position={[0.15, 0.82, 0.15]}>
+            <boxGeometry args={[0.55, 0.03, 0.22]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+          <mesh position={[-0.75, 0.86, 0.25]}>
+            <cylinderGeometry args={[0.08, 0.07, 0.12, 10]} />
+            <meshStandardMaterial color="#f8fafc" />
+          </mesh>
+          <Chair position={[0, 0, 0.95]} rotation={Math.PI} color="#1e293b" />
         </group>
+      ))}
+
+      {/* Ceiling panels strip */}
+      {[-4, -1.3, 1.3, 4].map((x) => (
+        <mesh key={x} position={[x, 3.85, 0]}>
+          <boxGeometry args={[2.2, 0.06, 10]} />
+          <meshStandardMaterial color="#cbd5e1" emissive="#e2e8f0" emissiveIntensity={0.15} />
+        </mesh>
       ))}
 
       <WallClock position={[0, 3.4, -6.6]} />
       <Plant position={[-7, 0, 5]} />
       <Plant position={[7, 0, -5]} scale={0.9} />
+      <Plant position={[-7.2, 0, -5.2]} scale={0.75} />
       <Guest position={[-4, 0, -1.2]} rotation={0} shirt="#64748b" />
       <Guest position={[4, 0, -1.2]} rotation={0} shirt="#0ea5e9" />
+      <Guest position={[-2.2, 0, 4.2]} rotation={Math.PI} shirt="#f59e0b" pants="#1f2937" />
 
       <NPC
         id="office-diane"

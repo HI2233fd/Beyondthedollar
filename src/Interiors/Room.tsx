@@ -56,6 +56,16 @@ export function Room({
         <meshStandardMaterial color="#f4f2ee" side={2} />
       </mesh>
 
+      {/* Ceiling light fixtures */}
+      {[-hd * 0.35, hd * 0.25].map((z, i) => (
+        <group key={i} position={[0, h - 0.12, z]}>
+          <mesh>
+            <boxGeometry args={[2.4, 0.08, 0.55]} />
+            <meshStandardMaterial color="#e2e8f0" emissive="#fff7ed" emissiveIntensity={0.35} />
+          </mesh>
+        </group>
+      ))}
+
       {/* Back wall */}
       <mesh position={[0, h / 2, -hd]} receiveShadow>
         <boxGeometry args={[w, h, WALL_T]} />
@@ -82,6 +92,20 @@ export function Room({
       <mesh position={[0, h - 0.6, hd]}>
         <boxGeometry args={[2.6, 1.2, WALL_T]} />
         <meshStandardMaterial color={wall} />
+      </mesh>
+
+      {/* Baseboards */}
+      <mesh position={[0, 0.08, -hd + WALL_T / 2 + 0.02]}>
+        <boxGeometry args={[w - WALL_T, 0.16, 0.06]} />
+        <meshStandardMaterial color="#d6d3d1" />
+      </mesh>
+      <mesh position={[-hw + WALL_T / 2 + 0.02, 0.08, 0]}>
+        <boxGeometry args={[0.06, 0.16, d - WALL_T]} />
+        <meshStandardMaterial color="#d6d3d1" />
+      </mesh>
+      <mesh position={[hw - WALL_T / 2 - 0.02, 0.08, 0]}>
+        <boxGeometry args={[0.06, 0.16, d - WALL_T]} />
+        <meshStandardMaterial color="#d6d3d1" />
       </mesh>
 
       {children}

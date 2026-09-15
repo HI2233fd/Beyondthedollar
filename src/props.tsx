@@ -260,3 +260,68 @@ export function Pedestrian({
     </group>
   )
 }
+
+export function Bench({
+  position,
+  rotation = 0,
+}: {
+  position: [number, number, number]
+  rotation?: number
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.42, 0]} castShadow>
+        <boxGeometry args={[1.4, 0.1, 0.45]} />
+        <meshStandardMaterial color="#6b4f2a" roughness={0.85} />
+      </mesh>
+      <mesh position={[0, 0.7, -0.18]}>
+        <boxGeometry args={[1.4, 0.45, 0.08]} />
+        <meshStandardMaterial color="#5a4124" />
+      </mesh>
+      {[-0.55, 0.55].map((x) => (
+        <mesh key={x} position={[x, 0.22, 0]}>
+          <boxGeometry args={[0.08, 0.44, 0.4]} />
+          <meshStandardMaterial color="#374151" metalness={0.4} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+export function Mailbox({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.55, 0]} castShadow>
+        <boxGeometry args={[0.45, 0.55, 0.28]} />
+        <meshStandardMaterial color="#1d4ed8" metalness={0.35} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0.22, 0]}>
+        <cylinderGeometry args={[0.06, 0.08, 0.44, 8]} />
+        <meshStandardMaterial color="#334155" />
+      </mesh>
+      <mesh position={[0, 0.72, 0.16]}>
+        <boxGeometry args={[0.28, 0.08, 0.04]} />
+        <meshStandardMaterial color="#0f172a" />
+      </mesh>
+    </group>
+  )
+}
+
+export function Planter({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.28, 0]} castShadow>
+        <cylinderGeometry args={[0.42, 0.36, 0.55, 10]} />
+        <meshStandardMaterial color="#78716c" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.62, 0]} castShadow>
+        <icosahedronGeometry args={[0.38, 1]} />
+        <meshStandardMaterial color="#3f7d44" flatShading />
+      </mesh>
+      <mesh position={[0.18, 0.78, 0.08]} castShadow>
+        <icosahedronGeometry args={[0.22, 1]} />
+        <meshStandardMaterial color="#4a8a4f" flatShading />
+      </mesh>
+    </group>
+  )
+}

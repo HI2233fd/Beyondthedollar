@@ -15,18 +15,28 @@ export function Building({ def }: { def: BuildingDef }) {
     buildingHasActiveCurriculum(def.id as BuildingId, unlocked, completed)
 
   const front = def.z + def.facing * (def.d / 2 + 0.02)
+  const back = def.z - def.facing * (def.d / 2 + 0.02)
   const door = doorPosition(def)
+  const left = def.x - def.w / 2 - 0.02
+  const right = def.x + def.w / 2 + 0.02
 
-  // Window grid on the front facade
+  // Window grids on all four facades
   const floors = Math.max(1, Math.floor(def.h / 2.6))
   const cols = Math.max(2, Math.floor(def.w / 3))
-  const windows: { x: number; y: number }[] = []
+  const sideCols = Math.max(1, Math.floor(def.d / 3.2))
+  const windows: { x: number; y: number; z: number; rotY: number; size: [number, number] }[] = []
   for (let f = 0; f < floors; f++) {
+    const wy = 2.2 + f * 2.6
+    if (wy > def.h - 0.8) continue
     for (let c = 0; c < cols; c++) {
       const wx = def.x - def.w / 2 + (def.w / (cols + 1)) * (c + 1)
-      const wy = 2.2 + f * 2.6
-      if (wy > def.h - 0.8) continue
-      windows.push({ x: wx, y: wy })
+      windows.push({ x: wx, y: wy, z: front, rotY: 0, size: [1.1, 1.4] })
+      windows.push({ x: wx, y: wy, z: back, rotY: Math.PI, size: [1.1, 1.4] })
+    }
+    for (let c = 0; c < sideCols; c++) {
+      const wz = def.z - def.d / 2 + (def.d / (sideCols + 1)) * (c + 1)
+      windows.push({ x: left, y: wy, z: wz, rotY: Math.PI / 2, size: [0.95, 1.25] })
+      windows.push({ x: right, y: wy, z: wz, rotY: -Math.PI / 2, size: [0.95, 1.25] })
     }
   }
 
@@ -44,20 +54,54 @@ export function Building({ def }: { def: BuildingDef }) {
         />
       </mesh>
 
-      {/* Roof cap */}
+      {/* Facade trim / base course */}
+      <mesh position={[def.x, 0.45, front + def.facing * 0.02]}>
+        <boxGeometry args={[def.w + 0.15, 0.9, 0.12]} />
+        <meshStandardMaterial color="#1f2937" roughness={0.7} />
+      </mesh>
+
+      {/* Corner pilasters */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[def.x + s * (def.w / 2 - 0.18), def.h / 2, front + def.facing * 0.04]}>
+          <boxGeometry args={[0.28, def.h, 0.16]} />
+          <meshStandardMaterial color="#111827" roughness={0.8} />
+        </mesh>
+      ))}
+
+      {/* Roof cap + slight overhang */}
       <mesh position={[def.x, def.h + 0.15, def.z]}>
-        <boxGeometry args={[def.w + 0.4, 0.3, def.d + 0.4]} />
+        <boxGeometry args={[def.w + 0.55, 0.3, def.d + 0.55]} />
         <meshStandardMaterial color="#2b3444" roughness={0.9} />
       </mesh>
+      <mesh position={[def.x, def.h + 0.38, def.z]}>
+        <boxGeometry args={[def.w * 0.55, 0.2, def.d * 0.45]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.2} roughness={0.7} />
+      </mesh>
+
+      {/* Awning over entrance */}
+      {def.enterable && (
+        <group>
+          <mesh position={[door[0], 2.55, front + def.facing * 0.55]} rotation={[def.facing * 0.12, 0, 0]}>
+            <boxGeometry args={[3.4, 0.08, 1.4]} />
+            <meshStandardMaterial color={def.signColor} roughness={0.55} metalness={0.15} />
+          </mesh>
+          {[-1.4, 1.4].map((ox) => (
+            <mesh key={ox} position={[door[0] + ox, 1.7, front + def.facing * 1.05]}>
+              <cylinderGeometry args={[0.04, 0.04, 1.7, 8]} />
+              <meshStandardMaterial color="#334155" metalness={0.5} />
+            </mesh>
+          ))}
+        </group>
+      )}
 
       {/* Windows */}
       {windows.map((w, i) => (
-        <mesh key={i} position={[w.x, w.y, front]}>
-          <planeGeometry args={[1.1, 1.4]} />
+        <mesh key={i} position={[w.x, w.y, w.z]} rotation={[0, w.rotY, 0]}>
+          <planeGeometry args={w.size} />
           <meshStandardMaterial
             color={def.glass ? '#bfe3ff' : '#8fb7d6'}
             emissive={learnHere ? def.signColor : '#3a5a72'}
-            emissiveIntensity={learnHere ? 0.55 : 0.25}
+            emissiveIntensity={learnHere ? 0.55 : 0.22}
             metalness={0.4}
             roughness={0.15}
           />
@@ -70,7 +114,7 @@ export function Building({ def }: { def: BuildingDef }) {
         <meshStandardMaterial color="#26333f" metalness={0.5} roughness={0.1} transparent opacity={0.85} />
       </mesh>
 
-      {/* Door frame */}
+      {/* Door frame + handle */}
       <mesh position={[door[0], 1.2, front + def.facing * 0.03]}>
         <planeGeometry args={[1.7, 2.4]} />
         <meshStandardMaterial
@@ -80,6 +124,10 @@ export function Building({ def }: { def: BuildingDef }) {
           emissive={learnHere ? def.signColor : '#000000'}
           emissiveIntensity={learnHere ? 0.35 : 0}
         />
+      </mesh>
+      <mesh position={[door[0] + 0.55, 1.15, front + def.facing * 0.06]}>
+        <boxGeometry args={[0.08, 0.22, 0.06]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.7} roughness={0.25} />
       </mesh>
 
       {/* Sign backing + text */}

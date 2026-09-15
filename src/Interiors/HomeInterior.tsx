@@ -32,16 +32,38 @@ export function HomeInterior() {
   return (
     <Room w={12} d={11} floor="#d6cfc4" wall="#f3efe8">
       <Rug position={[0, 0.02, 0.5]} size={[6, 4]} color="#b08968" />
+      <Rug position={[-3.6, 0.02, 3.2]} size={[2.4, 1.8]} color="#a8b5c4" />
       <WallClock position={[0, 3.2, -5.3]} />
       <Plant position={[-4.5, 0, -4]} />
       <Plant position={[4.2, 0, 3.5]} />
+      <Plant position={[4.4, 0, -4.2]} scale={0.7} />
       <Chair position={[-2.2, 0, -1.5]} rotation={0.4} />
       <Chair position={[2.4, 0, -1.2]} rotation={-0.3} />
+      <Chair position={[-1.2, 0, 1.6]} rotation={2.4} color="#57534e" />
 
+      {/* Sofa */}
       <mesh position={[0, 0.45, -3.6]} castShadow>
         <boxGeometry args={[4.2, 0.9, 1.4]} />
         <meshStandardMaterial color="#6b7c8f" />
       </mesh>
+      <mesh position={[0, 0.95, -4.1]} castShadow>
+        <boxGeometry args={[4.2, 0.7, 0.35]} />
+        <meshStandardMaterial color="#5a6b7d" />
+      </mesh>
+      {/* Coffee table + lamp */}
+      <mesh position={[0, 0.28, -1.8]} castShadow>
+        <boxGeometry args={[1.6, 0.12, 0.8]} />
+        <meshStandardMaterial color="#7c5a3a" />
+      </mesh>
+      <mesh position={[-4.2, 0.7, 0.8]} castShadow>
+        <cylinderGeometry args={[0.18, 0.22, 1.2, 10]} />
+        <meshStandardMaterial color="#d6d3d1" />
+      </mesh>
+      <mesh position={[-4.2, 1.4, 0.8]}>
+        <cylinderGeometry args={[0.35, 0.28, 0.28, 12]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fde68a" emissiveIntensity={0.35} />
+      </mesh>
+      <pointLight position={[-4.2, 1.55, 0.8]} intensity={6} distance={8} color="#fff4d6" />
 
       <NPC
         id="home-jordan"

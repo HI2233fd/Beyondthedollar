@@ -105,8 +105,8 @@ export function Game() {
   useEffect(() => {
     initControls()
     useGame.setState({ spawn: CITY_START, scene: 'city' })
-    // Dev/review hook so browser automation shares the live store
-    ;(window as unknown as { __useGame?: typeof useGame }).__useGame = useGame
+    // Dev/review hook so browser automation shares the live (HMR-stable) store
+    window.__useGame = useGame
   }, [])
 
   // fade + finish transition on scene change

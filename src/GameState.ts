@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import { CURRICULUM, unlockedAfterCompleting } from './curriculum'
 import { MINUTES_PER_DAY, START_TOTAL_MINUTES, stampFromMinutes } from './simulation/time'
 import { getScenario, registerRuntimeScenario, type ScenarioStat } from './simulation/scenarios'
@@ -254,7 +254,13 @@ function bumpCredit(score: number, established: boolean, delta: number): number 
   return Math.max(300, Math.min(850, score + delta))
 }
 
-export const useGame = create<GameState>((set, get) => ({
+type UseGameStore = UseBoundStore<StoreApi<GameState>>
+
+/** Survives Vite HMR so Phone/HUD/NPC never diverge onto a fresh empty store. */
+const STORE_GLOBAL = '__beyondTheDollarUseGame' as const
+
+function createGameStore(): UseGameStore {
+  return create<GameState>((set, get) => ({
   cash: GRADUATION_CASH,
   bank: 0,
   savings: 0,
@@ -456,25 +462,26 @@ export const useGame = create<GameState>((set, get) => ({
     const rate = rates[Math.min(3, s.interviewCorrect)] ?? 0.15
     const roll = Math.random()
     const hired = roll < rate
+    const score = s.interviewCorrect
     if (hired) {
+      const nextPay = s.totalMinutes + 7 * MINUTES_PER_DAY
+      const message = `You’re hired as Office Assistant ($16/hr, 15 hrs/week, ~$240 gross). Interview score ${score}/3. Direct deposit hits checking weekly — open your Phone to confirm job status and upcoming payday.`
       set({
         hasJob: true,
         career: 'Office Assistant',
         weeklyIncome: 16 * 15,
-        nextPaydayAt: s.totalMinutes + 7 * MINUTES_PER_DAY,
+        nextPaydayAt: nextPay,
         interviewActive: false,
         interviewCorrect: 0,
         interviewAsked: 0,
+        lastBillNotice: 'Hired · Office Assistant — check Phone for job & payday',
       })
-      return {
-        hired: true,
-        message: `You’re hired as Office Assistant ($16/hr, 15 hrs/week). You got ${s.interviewCorrect}/3 interview answers right.`,
-      }
+      return { hired: true, message }
     }
     set({ interviewActive: false, interviewCorrect: 0, interviewAsked: 0 })
     return {
       hired: false,
-      message: `Not this time — you scored ${s.interviewCorrect}/3. Review the role and try applying again later.`,
+      message: `Not this time — you scored ${score}/3. Review the role and try applying again later.`,
     }
   },
 
@@ -1090,6 +1097,22 @@ export const useGame = create<GameState>((set, get) => ({
     s.openScenario('home-rent-vs-buy')
   },
 }))
+}
+
+function getOrCreateGameStore(): UseGameStore {
+  const g = globalThis as typeof globalThis & { [STORE_GLOBAL]?: UseGameStore }
+  const hotStore = import.meta.hot?.data?.useGame as UseGameStore | undefined
+  const existing = g[STORE_GLOBAL] ?? hotStore
+  const store = existing ?? createGameStore()
+  g[STORE_GLOBAL] = store
+  if (import.meta.hot) {
+    import.meta.hot.data.useGame = store
+    import.meta.hot.accept()
+  }
+  return store
+}
+
+export const useGame = getOrCreateGameStore()
 
 export const SCENE_LOCATION: Record<SceneId, string> = {
   city: 'City Streets',

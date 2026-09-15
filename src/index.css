@@ -63,6 +63,21 @@ canvas {
   font-weight: 800;
   margin-top: 2px;
 }
+.hud-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.2;
+  max-width: 150px;
+}
+.hud-sub.hud-warn {
+  color: #fb923c;
+}
+.hud-ok {
+  color: var(--accent) !important;
+}
 .hud-loc .hud-value {
   color: var(--accent-2);
   font-size: 0.98rem;
@@ -218,6 +233,19 @@ canvas {
   border-color: var(--accent-2);
   background: rgba(56, 189, 248, 0.16);
 }
+.phone-fab-hired {
+  border-color: rgba(52, 211, 153, 0.45);
+}
+.phone-fab-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+  vertical-align: middle;
+}
 
 .phone-card {
   width: min(420px, 94vw);
@@ -247,7 +275,7 @@ canvas {
 }
 .phone-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   margin-bottom: 14px;
 }
@@ -259,6 +287,7 @@ canvas {
   padding: 8px 10px;
   font-weight: 800;
   cursor: pointer;
+  font-size: 0.82rem;
 }
 .phone-tab.active {
   color: var(--text);
@@ -267,11 +296,25 @@ canvas {
 }
 .phone-hero {
   margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+}
+.phone-hero-ok {
+  border-color: rgba(52, 211, 153, 0.35);
+  background: rgba(52, 211, 153, 0.08);
 }
 .phone-hero strong {
   display: block;
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   margin-top: 2px;
+}
+.phone-hero-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 .phone-grid {
   display: grid;
@@ -282,6 +325,29 @@ canvas {
 .phone-grid strong {
   display: block;
   margin-top: 2px;
+}
+.phone-strong-sm {
+  font-size: 0.92rem !important;
+  line-height: 1.25;
+}
+.phone-gate .phone-gate-mark {
+  display: inline-block;
+  width: 1.1em;
+  font-weight: 800;
+  color: var(--muted);
+}
+.phone-gate.ok .phone-gate-mark {
+  color: var(--accent);
+}
+.phone-alert {
+  color: #fdba74 !important;
+  border: 1px solid rgba(251, 146, 60, 0.35);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(251, 146, 60, 0.08);
+}
+.phone-due {
+  color: #fdba74;
 }
 .phone-section {
   margin: 14px 0 8px;
