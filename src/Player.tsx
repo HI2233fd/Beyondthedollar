@@ -56,8 +56,9 @@ export function Player() {
     const yaw = rig.yaw.current
     const fwdX = Math.sin(yaw)
     const fwdZ = Math.cos(yaw)
-    const rgtX = Math.cos(yaw)
-    const rgtZ = -Math.sin(yaw)
+    // Screen-right relative to the camera (fixes A/D strafe direction).
+    const rgtX = -Math.cos(yaw)
+    const rgtZ = Math.sin(yaw)
 
     let dx = fwdX * f + rgtX * r
     let dz = fwdZ * f + rgtZ * r
