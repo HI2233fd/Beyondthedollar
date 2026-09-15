@@ -194,6 +194,141 @@ canvas {
   cursor: pointer;
   pointer-events: auto;
 }
+.market-toast {
+  border-color: rgba(251, 146, 60, 0.45);
+}
+
+.phone-fab {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 24;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  background: rgba(15, 23, 42, 0.92);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.phone-fab:hover,
+.phone-fab.active {
+  border-color: var(--accent-2);
+  background: rgba(56, 189, 248, 0.16);
+}
+
+.phone-card {
+  width: min(420px, 94vw);
+  max-height: min(86vh, 720px);
+  overflow: auto;
+  background: linear-gradient(180deg, #1a2438, #0e1524);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+  animation: pop 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.phone-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.phone-close {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.phone-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.phone-tab {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.phone-tab.active {
+  color: var(--text);
+  border-color: var(--accent-2);
+  background: rgba(56, 189, 248, 0.12);
+}
+.phone-hero {
+  margin-bottom: 12px;
+}
+.phone-hero strong {
+  display: block;
+  font-size: 1.6rem;
+  margin-top: 2px;
+}
+.phone-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.phone-grid strong {
+  display: block;
+  margin-top: 2px;
+}
+.phone-section {
+  margin: 14px 0 8px;
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+}
+.phone-list {
+  display: grid;
+  gap: 8px;
+}
+.phone-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.9rem;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.phone-row-total {
+  font-weight: 800;
+  border-bottom: none;
+}
+.phone-when {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.phone-muted {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin: 0;
+}
+.phone-stub-detail {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: -4px;
+  margin-bottom: 6px;
+}
+.phone-missed {
+  color: #f87171;
+}
+.phone-now {
+  margin-top: 12px;
+}
 
 .invest-card {
   width: min(520px, 94vw);

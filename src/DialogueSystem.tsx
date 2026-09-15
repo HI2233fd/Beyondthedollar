@@ -8,7 +8,11 @@ export function DialogueSystem() {
   if (!dialogue) return null
 
   const choose = (opt: DialogueOption) => {
+    const before = useGame.getState().dialogue
     opt.action?.()
+    const after = useGame.getState().dialogue
+    // Action may replace the dialogue (e.g. gated bank/job decisions).
+    if (after && after !== before) return
     if (opt.next) openDialogue(opt.next)
     else if (opt.close || !opt.next) closeDialogue()
   }

@@ -1,21 +1,34 @@
 import { create } from 'zustand'
 import { CURRICULUM, unlockedAfterCompleting } from './curriculum'
 import { MINUTES_PER_DAY, START_TOTAL_MINUTES, stampFromMinutes } from './simulation/time'
-import { getScenario, type ScenarioStat } from './simulation/scenarios'
+import { getScenario, registerRuntimeScenario, type ScenarioStat } from './simulation/scenarios'
 import {
   billInDays,
   removeBillsByCategory,
   upsertBill,
   type RecurringBill,
 } from './simulation/bills'
-import { buildRandomExpenseScenario, rollNextExpenseAt } from './simulation/randomExpenses'
+import {
+  buildRandomExpenseScenario,
+  rollNextExpenseAt,
+  type ExpenseContext,
+} from './simulation/randomExpenses'
 import {
   INITIAL_ASSETS,
   stepPrices,
   type AssetId,
   type Holdings,
 } from './simulation/investing'
-import { registerRuntimeScenario } from './simulation/scenarios'
+import {
+  CAR_CREDIT_MIN,
+  CAR_SAVINGS_MIN,
+  CREDIT_PRODUCT_MIN,
+  CREDIT_SCORE_ON_FILE,
+  GRADUATION_CASH,
+  HOME_CREDIT_MIN,
+  HOME_DOWN_PAYMENT,
+  INVEST_SAVINGS_MIN,
+} from './simulation/progression'
 
 export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
 
@@ -46,6 +59,24 @@ export interface Spawn {
 export type CarStatus = 'none' | 'owned' | 'leased'
 export type HomeStatus = 'renting' | 'owned'
 
+export interface Paystub {
+  id: string
+  atTotalMinutes: number
+  employer: string
+  gross: number
+  tax: number
+  net: number
+}
+
+export interface LedgerEntry {
+  id: string
+  atTotalMinutes: number
+  label: string
+  amount: number
+  kind: 'bill' | 'paycheck' | 'expense' | 'interest' | 'late-fee'
+  status: 'paid' | 'missed'
+}
+
 export const CAR_BUY_DOWN = 2000
 export const CAR_LOAN_MONTHLY = 280
 export const CAR_LEASE_MONTHLY = 249
@@ -53,11 +84,11 @@ export const CAR_INSURANCE_MONTHLY = 110
 export const CAR_MAINTENANCE_MONTHLY = 40
 
 export const RENT_MONTHLY = 900
-export const HOME_DOWN_PAYMENT = 15000
-export const HOME_CREDIT_MIN = 640
 export const MORTGAGE_MONTHLY = 1050
 export const PROPERTY_TAX_MONTHLY = 150
 export const HOME_MAINTENANCE_MONTHLY = 100
+
+export { HOME_CREDIT_MIN, HOME_DOWN_PAYMENT, INVEST_SAVINGS_MIN, CREDIT_PRODUCT_MIN }
 
 interface GameState {
   cash: number
@@ -66,10 +97,13 @@ interface GameState {
   weeklyIncome: number
   monthlyExpenses: number
   creditScore: number
+  creditEstablished: boolean
   debt: number
   education: string
   career: string
   transportationAvailable: boolean
+  hasCheckingAccount: boolean
+  hasCreditCard: boolean
 
   scene: SceneId
   spawn: Spawn | null
@@ -85,6 +119,9 @@ interface GameState {
   lifeEventOutcome: string | null
 
   hasJob: boolean
+  incomeFactor: number
+  incomeFactorUntil: number
+  nextPaydayAt: number
 
   completedTopicIds: string[]
   unlockedUnitNumber: number
@@ -102,19 +139,22 @@ interface GameState {
   firedTriggerIds: string[]
   engagedScenarioIds: string[]
 
-  /** Recurring calendar charges (rent, car, mortgage…). */
   recurringBills: RecurringBill[]
   lastBillNotice: string | null
+  lastMarketNotice: string | null
+  recentlyMissedBill: boolean
 
-  /** Random life-expense scheduler. */
   nextRandomExpenseAt: number
 
-  /** Investing (Bank). */
   assetPrices: Record<AssetId, number>
   holdings: Holdings
   lastPriceDayIndex: number
   investingPanelOpen: boolean
   investingIntroSeen: boolean
+
+  phoneOpen: boolean
+  paystubs: Paystub[]
+  ledger: LedgerEntry[]
 
   carStatus: CarStatus
   homeStatus: HomeStatus
@@ -125,11 +165,13 @@ interface GameState {
   enterScene: (scene: SceneId, spawn: Spawn) => void
   finishTransition: () => void
 
-  deposit: (amount: number) => void
-  withdraw: (amount: number) => void
-  openSavings: (amount: number) => void
-  transferToSavings: (amount: number) => void
-  applyJob: () => void
+  openCheckingAccount: () => void
+  deposit: (amount: number) => string | null
+  withdraw: (amount: number) => string | null
+  openSavings: (amount: number) => string | null
+  transferToSavings: (amount: number) => string | null
+  applyForCreditCard: () => string | null
+  applyJob: () => string | null
 
   addToCart: (item: CartItem) => void
   clearCart: () => void
@@ -152,6 +194,10 @@ interface GameState {
   chooseScenarioOption: (choiceId: string) => void
   dismissScenario: () => void
   dismissBillNotice: () => void
+  dismissMarketNotice: () => void
+
+  openPhone: () => void
+  closePhone: () => void
 
   openInvestingPanel: () => void
   closeInvestingPanel: () => void
@@ -185,17 +231,29 @@ function takeFromLiquid(
   return { bank, savings, cash }
 }
 
+function pushLedger(list: LedgerEntry[], entry: LedgerEntry, cap = 40): LedgerEntry[] {
+  return [entry, ...list].slice(0, cap)
+}
+
+function bumpCredit(score: number, established: boolean, delta: number): number {
+  if (!established) return score
+  return Math.max(300, Math.min(850, score + delta))
+}
+
 export const useGame = create<GameState>((set, get) => ({
-  cash: 500,
-  bank: 1500,
-  savings: 1000,
+  cash: GRADUATION_CASH,
+  bank: 0,
+  savings: 0,
   weeklyIncome: 0,
   monthlyExpenses: RENT_MONTHLY,
-  creditScore: 650,
+  creditScore: 0,
+  creditEstablished: false,
   debt: 0,
-  education: 'High School',
-  career: 'Student',
+  education: 'High School graduate',
+  career: 'Unemployed',
   transportationAvailable: true,
+  hasCheckingAccount: false,
+  hasCreditCard: false,
 
   scene: 'city',
   spawn: null,
@@ -207,10 +265,13 @@ export const useGame = create<GameState>((set, get) => ({
   cart: [],
 
   lifeEventActive: false,
-  lifeEventShown: true, // legacy popup disabled; random scenarios replace it
+  lifeEventShown: true,
   lifeEventOutcome: null,
 
   hasJob: false,
+  incomeFactor: 1,
+  incomeFactorUntil: 0,
+  nextPaydayAt: START_TOTAL_MINUTES + 7 * MINUTES_PER_DAY,
 
   completedTopicIds: [],
   unlockedUnitNumber: 1,
@@ -232,6 +293,8 @@ export const useGame = create<GameState>((set, get) => ({
     billInDays('rent-maple', 'Maple Apartments rent', RENT_MONTHLY, 30, START_TOTAL_MINUTES, 'rent', 7),
   ],
   lastBillNotice: null,
+  lastMarketNotice: null,
+  recentlyMissedBill: false,
 
   nextRandomExpenseAt: rollNextExpenseAt(START_TOTAL_MINUTES),
 
@@ -241,48 +304,122 @@ export const useGame = create<GameState>((set, get) => ({
   investingPanelOpen: false,
   investingIntroSeen: false,
 
+  phoneOpen: false,
+  paystubs: [],
+  ledger: [],
+
   carStatus: 'none',
   homeStatus: 'renting',
 
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
   },
-  openDialogue: (d) => set({ dialogue: d, prompt: null }),
+  openDialogue: (d) => set({ dialogue: d, prompt: null, phoneOpen: false }),
   closeDialogue: () => {
     if (get().dialogue) set({ dialogue: null })
   },
 
   enterScene: (scene, spawn) =>
-    set({ transitioning: true, scene, spawn, dialogue: null, prompt: null, investingPanelOpen: false }),
+    set({
+      transitioning: true,
+      scene,
+      spawn,
+      dialogue: null,
+      prompt: null,
+      investingPanelOpen: false,
+      phoneOpen: false,
+    }),
   finishTransition: () => set({ transitioning: false }),
 
+  openCheckingAccount: () => {
+    const s = get()
+    if (s.hasCheckingAccount) return
+    const deposit = Math.min(s.cash, GRADUATION_CASH)
+    set({
+      hasCheckingAccount: true,
+      bank: s.bank + deposit,
+      cash: s.cash - deposit,
+      creditEstablished: true,
+      creditScore: s.creditEstablished ? s.creditScore : CREDIT_SCORE_ON_FILE,
+    })
+  },
   deposit: (amount) => {
-    const { cash, bank } = get()
-    const amt = Math.min(amount, cash)
-    set({ cash: cash - amt, bank: bank + amt })
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Open a checking account first.'
+    const amt = Math.min(amount, s.cash)
+    if (amt <= 0) return 'No cash to deposit.'
+    set({ cash: s.cash - amt, bank: s.bank + amt })
+    return null
   },
   withdraw: (amount) => {
-    const { cash, bank } = get()
-    const amt = Math.min(amount, bank)
-    set({ bank: bank - amt, cash: cash + amt })
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Open a checking account first.'
+    const amt = Math.min(amount, s.bank)
+    set({ bank: s.bank - amt, cash: s.cash + amt })
+    return null
   },
   openSavings: (amount) => {
-    const { cash, savings } = get()
-    const amt = Math.min(amount, cash)
-    set({ cash: cash - amt, savings: savings + amt })
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Open a checking account first.'
+    const amt = Math.min(amount, s.cash + s.bank)
+    if (amt <= 0) return 'Nothing to move into savings.'
+    let left = amt
+    let cash = s.cash
+    let bank = s.bank
+    const fromCash = Math.min(cash, left)
+    cash -= fromCash
+    left -= fromCash
+    bank -= left
+    set({
+      cash,
+      bank,
+      savings: s.savings + amt,
+      creditEstablished: true,
+      creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
+    })
+    return null
   },
   transferToSavings: (amount) => {
-    const { bank, savings } = get()
-    const amt = Math.min(amount, bank)
-    set({ bank: bank - amt, savings: savings + amt })
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Open a checking account first.'
+    const amt = Math.min(amount, s.bank)
+    set({
+      bank: s.bank - amt,
+      savings: s.savings + amt,
+      creditEstablished: true,
+      creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
+    })
+    return null
   },
-  applyJob: () => set({ hasJob: true, career: 'Office Assistant', weeklyIncome: 16 * 15 }),
+  applyForCreditCard: () => {
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Open a checking account first.'
+    if (!s.creditEstablished) return 'No credit history yet — bank activity and on-time bills build it.'
+    if (s.creditScore < CREDIT_PRODUCT_MIN) {
+      return `Credit score ${s.creditScore} is below ${CREDIT_PRODUCT_MIN}. Keep paying on time.`
+    }
+    if (s.hasCreditCard) return 'You already have a card on file.'
+    set({ hasCreditCard: true })
+    return null
+  },
+  applyJob: () => {
+    const s = get()
+    if (!s.hasCheckingAccount) return 'Employers want direct deposit — open checking at the bank first.'
+    if (s.hasJob) return 'You already have this job.'
+    set({
+      hasJob: true,
+      career: 'Office Assistant',
+      weeklyIncome: 16 * 15,
+      nextPaydayAt: s.totalMinutes + 7 * MINUTES_PER_DAY,
+    })
+    return null
+  },
 
   addToCart: (item) => set({ cart: [...get().cart, item] }),
   clearCart: () => set({ cart: [] }),
   checkout: () => {
     const { cart, cash } = get()
-    const total = cart.reduce((s, i) => s + i.price, 0)
+    const total = cart.reduce((sum, i) => sum + i.price, 0)
     const paid = Math.min(total, cash)
     set({ cash: cash - paid, cart: [] })
     return total
@@ -291,31 +428,7 @@ export const useGame = create<GameState>((set, get) => ({
   triggerLifeEvent: () => {
     if (!get().lifeEventShown) set({ lifeEventActive: true, lifeEventShown: true })
   },
-  resolveLifeEvent: (choice) => {
-    const s = get()
-    if (choice === 'savings') {
-      set({
-        savings: Math.max(0, s.savings - 700),
-        lifeEventActive: false,
-        lifeEventOutcome: 'You paid $700 from savings. Your car is repaired and back on the road.',
-      })
-    } else if (choice === 'credit') {
-      set({
-        creditScore: s.creditScore - 15,
-        debt: s.debt + 700,
-        lifeEventActive: false,
-        lifeEventOutcome:
-          'You put the $700 repair on credit. Your car runs again, but your credit score dropped 15 points and you owe $700.',
-      })
-    } else {
-      set({
-        transportationAvailable: false,
-        lifeEventActive: false,
-        lifeEventOutcome:
-          'You delayed the repair. Your car sits in the driveway — transportation is unavailable until you fix it.',
-      })
-    }
-  },
+  resolveLifeEvent: () => set({ lifeEventActive: false, lifeEventOutcome: null }),
   dismissLifeEventOutcome: () => set({ lifeEventOutcome: null }),
 
   openLesson: (lessonId) =>
@@ -327,15 +440,11 @@ export const useGame = create<GameState>((set, get) => ({
       dialogue: null,
       prompt: null,
       investingPanelOpen: false,
+      phoneOpen: false,
     }),
   closeLesson: () => set({ activeLessonId: null }),
   startQuiz: (quizId) =>
-    set({
-      activeQuizId: quizId,
-      activeLessonId: null,
-      quizAnswers: {},
-      quizSubmitted: false,
-    }),
+    set({ activeQuizId: quizId, activeLessonId: null, quizAnswers: {}, quizSubmitted: false }),
   answerQuiz: (questionId, choiceIndex) => {
     if (get().quizSubmitted) return
     set({ quizAnswers: { ...get().quizAnswers, [questionId]: choiceIndex } })
@@ -363,22 +472,66 @@ export const useGame = create<GameState>((set, get) => ({
     const prev = get()
     const totalMinutes = prev.totalMinutes + deltaMinutes
     const day = stampFromMinutes(totalMinutes).dayIndex
+
     let assetPrices = prev.assetPrices
     let lastPriceDayIndex = prev.lastPriceDayIndex
+    let lastMarketNotice = prev.lastMarketNotice
     if (day > lastPriceDayIndex) {
       for (let d = lastPriceDayIndex; d < day; d++) {
-        assetPrices = stepPrices(assetPrices)
+        const stepped = stepPrices(assetPrices)
+        assetPrices = stepped.prices
+        if (stepped.eventNote) lastMarketNotice = stepped.eventNote
       }
       lastPriceDayIndex = day
     }
 
-    let recurringBills = prev.recurringBills.map((b) => ({ ...b }))
+    let incomeFactor = prev.incomeFactor
+    if (prev.incomeFactorUntil > 0 && totalMinutes >= prev.incomeFactorUntil) {
+      incomeFactor = 1
+    }
+
     let bank = prev.bank
     let savings = prev.savings
     let cash = prev.cash
     let debt = prev.debt
     let creditScore = prev.creditScore
+    let creditEstablished = prev.creditEstablished
     let lastBillNotice = prev.lastBillNotice
+    let recentlyMissedBill = prev.recentlyMissedBill
+    let ledger = prev.ledger
+    let paystubs = prev.paystubs
+    let nextPaydayAt = prev.nextPaydayAt
+    const recurringBills = prev.recurringBills.map((b) => ({ ...b }))
+
+    // Paydays (weekly) — require checking for direct deposit
+    if (prev.hasJob && prev.hasCheckingAccount) {
+      let guard = 0
+      while (totalMinutes >= nextPaydayAt && guard++ < 8) {
+        const gross = Math.round(prev.weeklyIncome * incomeFactor)
+        const tax = Math.round(gross * 0.18)
+        const net = gross - tax
+        bank += net
+        const stub: Paystub = {
+          id: `pay-${nextPaydayAt}`,
+          atTotalMinutes: nextPaydayAt,
+          employer: 'Summit Office',
+          gross,
+          tax,
+          net,
+        }
+        paystubs = [stub, ...paystubs].slice(0, 20)
+        ledger = pushLedger(ledger, {
+          id: `led-pay-${nextPaydayAt}`,
+          atTotalMinutes: nextPaydayAt,
+          label: 'Paycheck (direct deposit)',
+          amount: net,
+          kind: 'paycheck',
+          status: 'paid',
+        })
+        lastBillNotice = `Paycheck deposited: $${net}`
+        nextPaydayAt += 7 * MINUTES_PER_DAY
+      }
+    }
 
     for (const bill of recurringBills) {
       let guard = 0
@@ -389,10 +542,34 @@ export const useGame = create<GameState>((set, get) => ({
           savings = paid.savings
           cash = paid.cash
           lastBillNotice = `Paid $${bill.amount} — ${bill.label}`
+          if (!creditEstablished) {
+            creditEstablished = true
+            creditScore = CREDIT_SCORE_ON_FILE + 4
+          } else {
+            creditScore = bumpCredit(creditScore, true, 4)
+          }
+          ledger = pushLedger(ledger, {
+            id: `led-${bill.id}-${bill.nextDueTotalMinutes}`,
+            atTotalMinutes: bill.nextDueTotalMinutes,
+            label: bill.label,
+            amount: bill.amount,
+            kind: 'bill',
+            status: 'paid',
+          })
         } else {
           debt += bill.amount
-          creditScore = Math.max(300, creditScore - 8)
+          creditScore = bumpCredit(creditScore, creditEstablished || true, -10)
+          creditEstablished = true
+          recentlyMissedBill = true
           lastBillNotice = `Missed $${bill.amount} — ${bill.label} (added to debt)`
+          ledger = pushLedger(ledger, {
+            id: `led-miss-${bill.id}-${bill.nextDueTotalMinutes}`,
+            atTotalMinutes: bill.nextDueTotalMinutes,
+            label: bill.label,
+            amount: bill.amount,
+            kind: 'bill',
+            status: 'missed',
+          })
         }
         bill.nextDueTotalMinutes += bill.everyDays * MINUTES_PER_DAY
       }
@@ -402,13 +579,21 @@ export const useGame = create<GameState>((set, get) => ({
       totalMinutes,
       assetPrices,
       lastPriceDayIndex,
+      lastMarketNotice,
+      incomeFactor,
+      incomeFactorUntil: incomeFactor === 1 ? 0 : prev.incomeFactorUntil,
       recurringBills,
       bank,
       savings,
       cash,
       debt,
       creditScore,
+      creditEstablished,
       lastBillNotice,
+      recentlyMissedBill,
+      ledger,
+      paystubs,
+      nextPaydayAt,
     })
   },
   setTimeScale: (scale) => set({ timeScale: Math.max(0, scale) }),
@@ -423,6 +608,7 @@ export const useGame = create<GameState>((set, get) => ({
       dialogue: null,
       prompt: null,
       investingPanelOpen: false,
+      phoneOpen: false,
       firedTriggerIds:
         triggerId && !s.firedTriggerIds.includes(triggerId)
           ? [...s.firedTriggerIds, triggerId]
@@ -441,6 +627,8 @@ export const useGame = create<GameState>((set, get) => ({
       scenarioChoiceId: choiceId,
       scenarioWhyOverride: null,
     }
+    let ledger = state.ledger
+
     const stats = choice.effects.stats
     if (stats) {
       ;(Object.keys(stats) as ScenarioStat[]).forEach((key) => {
@@ -459,44 +647,150 @@ export const useGame = create<GameState>((set, get) => ({
     const pay = choice.effects.payExpense
     if (pay) {
       if (pay.from === 'savings') {
-        if (state.savings >= pay.amount) patch.savings = state.savings - pay.amount
-        else {
+        if (state.savings >= pay.amount) {
+          patch.savings = state.savings - pay.amount
+          ledger = pushLedger(ledger, {
+            id: `led-exp-${state.totalMinutes}`,
+            atTotalMinutes: state.totalMinutes,
+            label: scenario?.title ?? 'Expense',
+            amount: pay.amount,
+            kind: 'expense',
+            status: 'paid',
+          })
+        } else {
           patch.scenarioWhyOverride =
             'Not enough savings — the bill went on credit instead, and your score took a small hit.'
           patch.debt = state.debt + pay.amount
-          patch.creditScore = Math.max(300, state.creditScore - 10)
+          patch.creditScore = bumpCredit(state.creditScore, true, -10)
+          patch.creditEstablished = true
         }
       } else if (pay.from === 'bank') {
-        if (state.bank >= pay.amount) patch.bank = state.bank - pay.amount
-        else {
+        if (state.bank >= pay.amount) {
+          patch.bank = state.bank - pay.amount
+          ledger = pushLedger(ledger, {
+            id: `led-exp-${state.totalMinutes}`,
+            atTotalMinutes: state.totalMinutes,
+            label: scenario?.title ?? 'Expense',
+            amount: pay.amount,
+            kind: 'expense',
+            status: 'paid',
+          })
+        } else {
           patch.scenarioWhyOverride =
             'Checking couldn’t cover it — the rest went on credit with a score ding.'
           const fromBank = state.bank
           patch.bank = 0
           patch.debt = state.debt + (pay.amount - fromBank)
-          patch.creditScore = Math.max(300, state.creditScore - 10)
+          patch.creditScore = bumpCredit(state.creditScore, true, -10)
+          patch.creditEstablished = true
         }
       } else if (pay.from === 'cash') {
         if (state.cash >= pay.amount) patch.cash = state.cash - pay.amount
         else {
-          patch.scenarioWhyOverride = 'You didn’t have enough cash, so credit covered the gap.'
+          patch.scenarioWhyOverride = 'Not enough cash — credit covered the gap.'
           patch.debt = state.debt + pay.amount
-          patch.creditScore = Math.max(300, state.creditScore - 8)
+          patch.creditScore = bumpCredit(state.creditScore, true, -8)
+          patch.creditEstablished = true
         }
       } else if (pay.from === 'credit') {
-        patch.debt = state.debt + pay.amount
-        patch.creditScore = Math.max(300, state.creditScore - 12)
+        if (!state.hasCreditCard && state.creditScore < CREDIT_PRODUCT_MIN && state.creditEstablished) {
+          patch.scenarioWhyOverride = `No credit product yet (need score ≥ ${CREDIT_PRODUCT_MIN}). The bill was delayed and may cost more later.`
+          patch.recentlyMissedBill = true
+        } else {
+          patch.debt = state.debt + pay.amount
+          patch.creditScore = bumpCredit(state.creditScore, true, -12)
+          patch.creditEstablished = true
+          ledger = pushLedger(ledger, {
+            id: `led-cred-${state.totalMinutes}`,
+            atTotalMinutes: state.totalMinutes,
+            label: scenario?.title ?? 'Credit charge',
+            amount: pay.amount,
+            kind: 'expense',
+            status: 'paid',
+          })
+        }
       } else if (pay.from === 'delay') {
-        patch.transportationAvailable = state.transportationAvailable
         if (activeScenarioId.includes('car-repair')) patch.transportationAvailable = false
-        patch.creditScore = Math.max(300, state.creditScore - 3)
+        patch.creditScore = bumpCredit(state.creditScore, state.creditEstablished, -3)
+        patch.recentlyMissedBill = true
       }
     }
 
+    if (choice.effects.hoursCut) {
+      const { weeklyLoss, days } = choice.effects.hoursCut
+      const base = state.weeklyIncome || 240
+      const factor = Math.max(0.35, 1 - weeklyLoss / Math.max(base, 1))
+      patch.incomeFactor = Math.min(state.incomeFactor, factor)
+      patch.incomeFactorUntil = state.totalMinutes + days * MINUTES_PER_DAY
+    }
+
+    if (choice.effects.rentHike != null) {
+      const hike = choice.effects.rentHike
+      const bills = state.recurringBills.map((b) =>
+        b.category === 'rent' ? { ...b, amount: b.amount + hike, label: `Maple rent ($${b.amount + hike})` } : b,
+      )
+      patch.recurringBills = bills
+      patch.monthlyExpenses = (typeof patch.monthlyExpenses === 'number' ? patch.monthlyExpenses : state.monthlyExpenses) + hike
+    }
+
     if (choice.effects.carDeal === 'buy') {
-      const paid = takeFromLiquid(state, CAR_BUY_DOWN)
-      if (!paid) {
-        patch.scenarioWhyOverride = 'You need $2,000 liquid for the down payment. Build savings and try again.'
+      if (!state.hasJob) {
+        patch.scenarioWhyOverride = 'Dealers want steady income. Get hired first, then come back.'
+      } else if (!state.creditEstablished || state.creditScore < CAR_CREDIT_MIN) {
+        patch.scenarioWhyOverride = `Credit score too low for a car loan (need ${CAR_CREDIT_MIN}+). Keep paying bills on time.`
+      } else if (state.savings < CAR_SAVINGS_MIN) {
+        patch.scenarioWhyOverride = `Build at least $${CAR_SAVINGS_MIN} in savings before taking on a car.`
+      } else {
+        const paid = takeFromLiquid(state, CAR_BUY_DOWN)
+        if (!paid) {
+          patch.scenarioWhyOverride = 'You need $2,000 liquid for the down payment.'
+        } else {
+          let bills = removeBillsByCategory(state.recurringBills, [
+            'car-loan',
+            'car-lease',
+            'car-insurance',
+            'car-maintenance',
+          ])
+          bills = upsertBill(
+            bills,
+            billInDays('car-loan', 'Car loan payment', CAR_LOAN_MONTHLY, 30, state.totalMinutes, 'car-loan', 30),
+          )
+          bills = upsertBill(
+            bills,
+            billInDays(
+              'car-insurance',
+              'Car insurance',
+              CAR_INSURANCE_MONTHLY,
+              30,
+              state.totalMinutes,
+              'car-insurance',
+              30,
+            ),
+          )
+          bills = upsertBill(
+            bills,
+            billInDays(
+              'car-maint',
+              'Car maintenance fund',
+              CAR_MAINTENANCE_MONTHLY,
+              30,
+              state.totalMinutes,
+              'car-maintenance',
+              30,
+            ),
+          )
+          Object.assign(patch, paid)
+          patch.carStatus = 'owned'
+          patch.transportationAvailable = true
+          patch.debt = state.debt + 10000
+          patch.recurringBills = bills
+        }
+      }
+    } else if (choice.effects.carDeal === 'lease') {
+      if (!state.hasJob) {
+        patch.scenarioWhyOverride = 'Leases need proof of income. Get a job first.'
+      } else if (!state.creditEstablished || state.creditScore < CAR_CREDIT_MIN) {
+        patch.scenarioWhyOverride = `Credit score too low to lease (need ${CAR_CREDIT_MIN}+).`
       } else {
         let bills = removeBillsByCategory(state.recurringBills, [
           'car-loan',
@@ -506,7 +800,7 @@ export const useGame = create<GameState>((set, get) => ({
         ])
         bills = upsertBill(
           bills,
-          billInDays('car-loan', 'Car loan payment', CAR_LOAN_MONTHLY, 30, state.totalMinutes, 'car-loan', 30),
+          billInDays('car-lease', 'Car lease payment', CAR_LEASE_MONTHLY, 30, state.totalMinutes, 'car-lease', 30),
         )
         bills = upsertBill(
           bills,
@@ -520,70 +814,15 @@ export const useGame = create<GameState>((set, get) => ({
             30,
           ),
         )
-        bills = upsertBill(
-          bills,
-          billInDays(
-            'car-maint',
-            'Car maintenance fund',
-            CAR_MAINTENANCE_MONTHLY,
-            30,
-            state.totalMinutes,
-            'car-maintenance',
-            30,
-          ),
-        )
-        Object.assign(patch, paid)
-        patch.carStatus = 'owned'
+        patch.carStatus = 'leased'
         patch.transportationAvailable = true
-        patch.debt = state.debt + 10000
         patch.recurringBills = bills
-        patch.monthlyExpenses =
-          (state.homeStatus === 'owned'
-            ? MORTGAGE_MONTHLY + PROPERTY_TAX_MONTHLY + HOME_MAINTENANCE_MONTHLY
-            : RENT_MONTHLY) +
-          CAR_LOAN_MONTHLY +
-          CAR_INSURANCE_MONTHLY +
-          CAR_MAINTENANCE_MONTHLY
       }
-    } else if (choice.effects.carDeal === 'lease') {
-      let bills = removeBillsByCategory(state.recurringBills, [
-        'car-loan',
-        'car-lease',
-        'car-insurance',
-        'car-maintenance',
-      ])
-      bills = upsertBill(
-        bills,
-        billInDays('car-lease', 'Car lease payment', CAR_LEASE_MONTHLY, 30, state.totalMinutes, 'car-lease', 30),
-      )
-      bills = upsertBill(
-        bills,
-        billInDays(
-          'car-insurance',
-          'Car insurance',
-          CAR_INSURANCE_MONTHLY,
-          30,
-          state.totalMinutes,
-          'car-insurance',
-          30,
-        ),
-      )
-      patch.carStatus = 'leased'
-      patch.transportationAvailable = true
-      patch.recurringBills = bills
-      patch.monthlyExpenses =
-        (state.homeStatus === 'owned'
-          ? MORTGAGE_MONTHLY + PROPERTY_TAX_MONTHLY + HOME_MAINTENANCE_MONTHLY
-          : RENT_MONTHLY) +
-        CAR_LEASE_MONTHLY +
-        CAR_INSURANCE_MONTHLY
-    } else if (choice.effects.carDeal === 'pass') {
-      // no ownership change
     }
 
     if (choice.effects.homeDeal === 'buy') {
-      if (state.creditScore < HOME_CREDIT_MIN) {
-        patch.scenarioWhyOverride = `Credit score ${state.creditScore} is below ${HOME_CREDIT_MIN}. Keep paying on time and try again.`
+      if (!state.creditEstablished || state.creditScore < HOME_CREDIT_MIN) {
+        patch.scenarioWhyOverride = `Credit score ${state.creditEstablished ? state.creditScore : 'unrated'} is below ${HOME_CREDIT_MIN}. Keep paying on time.`
       } else {
         const paid = takeFromLiquid(state, HOME_DOWN_PAYMENT)
         if (!paid) {
@@ -625,16 +864,8 @@ export const useGame = create<GameState>((set, get) => ({
           )
           Object.assign(patch, paid)
           patch.homeStatus = 'owned'
-          patch.debt = state.debt + 165000
+          patch.debt = (typeof patch.debt === 'number' ? patch.debt : state.debt) + 165000
           patch.recurringBills = bills
-          const carPart =
-            state.carStatus === 'owned'
-              ? CAR_LOAN_MONTHLY + CAR_INSURANCE_MONTHLY + CAR_MAINTENANCE_MONTHLY
-              : state.carStatus === 'leased'
-                ? CAR_LEASE_MONTHLY + CAR_INSURANCE_MONTHLY
-                : 0
-          patch.monthlyExpenses =
-            MORTGAGE_MONTHLY + PROPERTY_TAX_MONTHLY + HOME_MAINTENANCE_MONTHLY + carPart
         }
       }
     } else if (choice.effects.homeDeal === 'keep-rent') {
@@ -644,14 +875,17 @@ export const useGame = create<GameState>((set, get) => ({
         'property-tax',
         'home-maintenance',
       ])
+      const rentBill = state.recurringBills.find((b) => b.category === 'rent')
+      const rentAmt = rentBill?.amount ?? RENT_MONTHLY
       bills = upsertBill(
         bills,
-        billInDays('rent-maple', 'Maple Apartments rent', RENT_MONTHLY, 30, state.totalMinutes, 'rent', 30),
+        billInDays('rent-maple', 'Maple Apartments rent', rentAmt, 30, state.totalMinutes, 'rent', 30),
       )
       patch.homeStatus = 'renting'
       patch.recurringBills = bills
     }
 
+    patch.ledger = ledger
     set(patch as Partial<GameState>)
   },
   dismissScenario: () => {
@@ -670,35 +904,52 @@ export const useGame = create<GameState>((set, get) => ({
     })
   },
   dismissBillNotice: () => set({ lastBillNotice: null }),
+  dismissMarketNotice: () => set({ lastMarketNotice: null }),
+
+  openPhone: () =>
+    set({ phoneOpen: true, dialogue: null, prompt: null, investingPanelOpen: false }),
+  closePhone: () => set({ phoneOpen: false }),
 
   openInvestingPanel: () => {
     const s = get()
     if (s.activeScenarioId) return
+    if (!s.hasCheckingAccount) {
+      s.openDialogue({
+        name: 'Invest desk',
+        text: 'Open a checking account with the teller before you can invest.',
+        options: [{ label: 'OK', close: true }],
+      })
+      return
+    }
+    if (s.savings < INVEST_SAVINGS_MIN) {
+      s.openDialogue({
+        name: 'Invest desk',
+        text: `Build a safety net first — you need about $${INVEST_SAVINGS_MIN} in savings before investing.`,
+        options: [{ label: 'Got it', close: true }],
+      })
+      return
+    }
     if (!s.investingIntroSeen) {
       s.openScenario('investing-intro')
       return
     }
-    set({ investingPanelOpen: true, dialogue: null, prompt: null })
+    set({ investingPanelOpen: true, dialogue: null, prompt: null, phoneOpen: false })
   },
   closeInvestingPanel: () => set({ investingPanelOpen: false }),
   buyAsset: (id, shares = 1) => {
     const s = get()
+    if (!s.hasCheckingAccount) return 'Open checking first.'
+    if (s.savings < INVEST_SAVINGS_MIN) return `Need $${INVEST_SAVINGS_MIN}+ in savings to invest.`
     const cost = s.assetPrices[id] * shares
     if (s.bank < cost) return 'Not enough checking balance.'
-    set({
-      bank: s.bank - cost,
-      holdings: { ...s.holdings, [id]: s.holdings[id] + shares },
-    })
+    set({ bank: s.bank - cost, holdings: { ...s.holdings, [id]: s.holdings[id] + shares } })
     return null
   },
   sellAsset: (id, shares = 1) => {
     const s = get()
     if (s.holdings[id] < shares) return 'You do not own that many shares.'
     const proceeds = s.assetPrices[id] * shares
-    set({
-      bank: s.bank + proceeds,
-      holdings: { ...s.holdings, [id]: s.holdings[id] - shares },
-    })
+    set({ bank: s.bank + proceeds, holdings: { ...s.holdings, [id]: s.holdings[id] - shares } })
     return null
   },
 
@@ -707,7 +958,23 @@ export const useGame = create<GameState>((set, get) => ({
     if (s.carStatus !== 'none') {
       s.openDialogue({
         name: 'AutoMart kiosk',
-        text: `You already ${s.carStatus === 'owned' ? 'own' : 'lease'} a car. Ongoing payments run on the calendar.`,
+        text: `You already ${s.carStatus === 'owned' ? 'own' : 'lease'} a car. Payments run on the calendar.`,
+        options: [{ label: 'OK', close: true }],
+      })
+      return
+    }
+    if (!s.hasJob) {
+      s.openDialogue({
+        name: 'AutoMart kiosk',
+        text: 'Applications need proof of income. Get a job first, then come back.',
+        options: [{ label: 'OK', close: true }],
+      })
+      return
+    }
+    if (!s.creditEstablished || s.creditScore < CAR_CREDIT_MIN) {
+      s.openDialogue({
+        name: 'AutoMart kiosk',
+        text: `Credit score too low (need ${CAR_CREDIT_MIN}+). On-time rent and bills raise it.`,
         options: [{ label: 'OK', close: true }],
       })
       return
@@ -737,15 +1004,27 @@ export const SCENE_LOCATION: Record<SceneId, string> = {
   home: 'Maple Apartments',
 }
 
-/** Called by TimeSystem when the random-expense timer elapses. */
 export function fireRandomExpenseIfDue() {
   const s = useGame.getState()
-  if (s.activeScenarioId) return false
+  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen) return false
   if (s.totalMinutes < s.nextRandomExpenseAt) return false
-  const { scenario } = buildRandomExpenseScenario(s.totalMinutes)
+  const rentAmount = s.recurringBills.find((b) => b.category === 'rent')?.amount ?? RENT_MONTHLY
+  const ctx: ExpenseContext = {
+    weeklyIncome: Math.round(s.weeklyIncome * s.incomeFactor),
+    savings: s.savings,
+    bank: s.bank,
+    cash: s.cash,
+    debt: s.debt,
+    hasJob: s.hasJob,
+    recentlyMissedBill: s.recentlyMissedBill,
+    rentAmount,
+  }
+  const { scenario } = buildRandomExpenseScenario(s.totalMinutes, ctx)
   registerRuntimeScenario(scenario)
-  const triggerId = `rand-expense-${scenario.id}`
-  s.openScenario(scenario.id, triggerId)
-  useGame.setState({ nextRandomExpenseAt: rollNextExpenseAt(s.totalMinutes) })
+  s.openScenario(scenario.id, `rand-expense-${scenario.id}`)
+  useGame.setState({
+    nextRandomExpenseAt: rollNextExpenseAt(s.totalMinutes),
+    recentlyMissedBill: scenario.id.includes('late-fee') ? false : s.recentlyMissedBill,
+  })
   return true
 }

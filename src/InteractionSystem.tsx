@@ -58,7 +58,8 @@ export function InteractionPrompt() {
   const dialogue = useGame((s) => s.dialogue)
   const scenario = useGame((s) => s.activeScenarioId)
   const investing = useGame((s) => s.investingPanelOpen)
-  if (!prompt || dialogue || scenario || investing) return null
+  const phone = useGame((s) => s.phoneOpen)
+  if (!prompt || dialogue || scenario || investing || phone) return null
   return (
     <div className="interact-prompt">
       <span className="key">E</span> {prompt}

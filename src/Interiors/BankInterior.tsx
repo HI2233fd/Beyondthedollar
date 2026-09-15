@@ -5,29 +5,50 @@ import { box } from '../collision'
 import { LearningStation } from '../curriculum/LearningStation'
 import { KioskStation } from '../simulation/KioskStation'
 import { useGame, type Dialogue } from '../GameState'
+import { CREDIT_PRODUCT_MIN, INVEST_SAVINGS_MIN } from '../simulation/progression'
 
 function bankDialogue(): Dialogue {
   const g = useGame.getState()
   const leave = { label: 'Leave', close: true as const }
+
+  if (!g.hasCheckingAccount) {
+    return {
+      name: 'Bank Teller — Marcus',
+      text: 'Welcome — first time? Let’s open a free checking account so paychecks and bills have somewhere to land.',
+      options: [
+        {
+          label: 'Open checking (deposit graduation cash)',
+          action: () => useGame.getState().openCheckingAccount(),
+          next: {
+            name: 'Bank Teller — Marcus',
+            text: 'You’re set. Checking is open and your graduation gift is deposited. Come back for savings, credit, or the invest desk.',
+            options: [leave],
+          },
+        },
+        leave,
+      ],
+    }
+  }
+
   return {
     name: 'Bank Teller — Marcus',
-    text: 'Welcome. Checking, savings, or the invest desk on your left?',
+    text: 'Checking is open. What do you need?',
     options: [
       {
-        label: 'Open a savings account',
-        action: () => useGame.getState().openSavings(200),
+        label: 'Move $100 into savings',
+        action: () => useGame.getState().openSavings(100),
         next: {
           name: 'Bank Teller — Marcus',
-          text: 'Done! I moved $200 from your cash into savings. Saving a little regularly really adds up.',
+          text: 'If you had funds, they’re in savings now. A cushion comes before investing.',
           options: [leave],
         },
       },
       {
-        label: 'Deposit $100 to checking',
-        action: () => useGame.getState().deposit(100),
+        label: 'Deposit $50 cash → checking',
+        action: () => useGame.getState().deposit(50),
         next: {
           name: 'Bank Teller — Marcus',
-          text: `Deposited $100. ${g.cash < 100 ? 'That was most of your cash — nicely done.' : 'Your money is safe with us.'}`,
+          text: 'Deposit complete (if you had the cash).',
           options: [leave],
         },
       },
@@ -36,16 +57,30 @@ function bankDialogue(): Dialogue {
         action: () => useGame.getState().withdraw(50),
         next: {
           name: 'Bank Teller — Marcus',
-          text: 'Here’s $50 from checking.',
+          text: 'Here’s cash from checking (if available).',
           options: [leave],
         },
       },
       {
-        label: 'Move $100 checking → savings',
-        action: () => useGame.getState().transferToSavings(100),
+        label: 'Apply for a credit card',
+        action: () => {
+          const msg = useGame.getState().applyForCreditCard()
+          useGame.setState({
+            dialogue: {
+              name: 'Bank Teller — Marcus',
+              text: msg
+                ? msg
+                : `Approved. Card on file. Products need score ≥ ${CREDIT_PRODUCT_MIN} — you cleared it.`,
+              options: [leave],
+            },
+          })
+        },
+      },
+      {
+        label: 'Ask about investing',
         next: {
           name: 'Bank Teller — Marcus',
-          text: 'Transferred $100 into savings.',
+          text: `Investing unlocks after about $${INVEST_SAVINGS_MIN} in savings. Build that cushion, then use the INVEST desk.`,
           options: [leave],
         },
       },
@@ -65,7 +100,6 @@ export function BankInterior() {
     >
       <Rug position={[0, 0.02, 1.5]} size={[9, 5]} color="#8399bd" />
 
-      {/* Teller counter with glass partitions */}
       <mesh position={[0, 0.6, -3.4]} castShadow>
         <boxGeometry args={[9, 1.2, 1]} />
         <meshStandardMaterial color="#6b4f2a" />
@@ -80,7 +114,6 @@ export function BankInterior() {
           <meshStandardMaterial color="#bfe3ff" metalness={0.4} roughness={0.1} transparent opacity={0.35} />
         </mesh>
       ))}
-      {/* Monitors on the counter */}
       {[-3, 3].map((x) => (
         <mesh key={x} position={[x, 1.55, -3.7]}>
           <boxGeometry args={[0.6, 0.4, 0.05]} />
@@ -88,14 +121,12 @@ export function BankInterior() {
         </mesh>
       ))}
 
-      {/* Back wall logo strip + clock */}
       <mesh position={[0, 3, -6.3]}>
         <boxGeometry args={[10, 1.4, 0.1]} />
         <meshStandardMaterial color="#0ea5e9" emissive="#0369a1" emissiveIntensity={0.3} />
       </mesh>
       <WallClock position={[6.4, 3.2, -6.24]} />
 
-      {/* ATM near the entrance */}
       <group position={[-6.7, 0, 3.4]}>
         <mesh position={[0, 1.1, 0]} castShadow>
           <boxGeometry args={[0.9, 2.2, 0.7]} />
@@ -107,7 +138,6 @@ export function BankInterior() {
         </mesh>
       </group>
 
-      {/* Queue posts with rope */}
       {[1.2, 2.6, 4].map((z) => (
         <mesh key={z} position={[1.5, 0.5, z]}>
           <cylinderGeometry args={[0.08, 0.1, 1, 8]} />
@@ -115,7 +145,6 @@ export function BankInterior() {
         </mesh>
       ))}
 
-      {/* Waiting area: chairs + coffee table + plants */}
       {[-6.2, -5, -3.8].map((x) => (
         <Chair key={x} position={[x, 0, 2.2]} rotation={Math.PI} />
       ))}
@@ -129,16 +158,12 @@ export function BankInterior() {
       <Plant position={[-7, 0, -5.2]} />
       <Plant position={[7, 0, 4.8]} scale={0.85} />
 
-      {/* Guests / customers */}
       <Guest position={[-6.2, 0, 2.2]} rotation={0} shirt="#b45309" />
       <Guest position={[-3.8, 0, 3.6]} rotation={Math.PI} shirt="#7c3aed" skin="#8d5a3c" />
       <Guest position={[1.5, 0, 0.5]} rotation={Math.PI} shirt="#0891b2" pants="#374151" />
       <Guest position={[3.2, 0, 1.4]} rotation={Math.PI + 0.4} shirt="#be123c" skin="#a9754f" hair="#111" />
-
-      {/* Second teller (non-interactive) */}
       <Guest position={[-3, 0, -2.6]} rotation={0} shirt="#0f766e" />
 
-      {/* Interactive teller */}
       <NPC
         id="bank-teller"
         scene="bank"
@@ -149,7 +174,6 @@ export function BankInterior() {
         pants="#1f2937"
         getDialogue={bankDialogue}
       />
-
 
       <LearningStation buildingId="bank" scene="bank" position={[-6.5, 0, -1.2]} />
       <KioskStation

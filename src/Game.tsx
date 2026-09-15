@@ -23,6 +23,7 @@ import { CityLighting } from './simulation/CityLighting'
 import { TimeSystem } from './simulation/TimeSystem'
 import { ScenarioPanel } from './simulation/ScenarioPanel'
 import { InvestingPanel } from './simulation/InvestingPanel'
+import { PhonePanel } from './simulation/PhonePanel'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -94,6 +95,7 @@ export function Game() {
   const quizOpen = useGame((s) => s.activeQuizId)
   const scenarioOpen = useGame((s) => s.activeScenarioId)
   const investingOpen = useGame((s) => s.investingPanelOpen)
+  const phoneOpen = useGame((s) => s.phoneOpen)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -132,7 +134,8 @@ export function Game() {
     !!lessonOpen ||
     !!quizOpen ||
     !!scenarioOpen ||
-    investingOpen
+    investingOpen ||
+    phoneOpen
   const showHint = !locked && !modalOpen
 
   return (
@@ -165,6 +168,7 @@ export function Game() {
         <QuizPanel />
         <ScenarioPanel />
         <InvestingPanel />
+        <PhonePanel />
         <LifeEventSystem />
         <TimeSystem />
 

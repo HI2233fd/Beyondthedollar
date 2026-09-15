@@ -3,12 +3,9 @@ export type AssetId = 'stock' | 'bond'
 export interface MarketAsset {
   id: AssetId
   name: string
-  /** Short risk label shown in UI. */
   risk: 'high' | 'low'
   price: number
-  /** Typical daily drift (fraction). */
   drift: number
-  /** Daily volatility (std-ish fraction). */
   volatility: number
 }
 
@@ -17,22 +14,31 @@ export interface Holdings {
   bond: number
 }
 
+export type MarketEventKind = 'spike' | 'crash' | null
+
+export interface PriceStepResult {
+  prices: Record<AssetId, number>
+  event: MarketEventKind
+  eventNote: string | null
+}
+
 export const INITIAL_ASSETS: Record<AssetId, MarketAsset> = {
   stock: {
     id: 'stock',
     name: 'Growth Stock ETF',
     risk: 'high',
     price: 48,
-    drift: 0.0015,
-    volatility: 0.028,
+    drift: 0.001,
+    /** Large daily swings so risk is visible in the phone portfolio. */
+    volatility: 0.055,
   },
   bond: {
     id: 'bond',
     name: 'Steady Bond Fund',
     risk: 'low',
     price: 22,
-    drift: 0.0004,
-    volatility: 0.006,
+    drift: 0.00035,
+    volatility: 0.004,
   },
 }
 
@@ -40,17 +46,53 @@ export function portfolioValue(prices: Record<AssetId, number>, holdings: Holdin
   return prices.stock * holdings.stock + prices.bond * holdings.bond
 }
 
-/** One game-day price step using a simple random walk. */
+function clampPrice(n: number): number {
+  return Math.max(1, Math.round(n * 100) / 100)
+}
+
+/**
+ * One game-day price step.
+ * Stocks move hard; bonds stay calm. ~4% chance of a sharp stock spike/crash.
+ */
 export function stepPrices(
   prices: Record<AssetId, number>,
   assets: Record<AssetId, MarketAsset> = INITIAL_ASSETS,
-): Record<AssetId, number> {
+): PriceStepResult {
   const next = { ...prices }
-  ;(Object.keys(assets) as AssetId[]).forEach((id) => {
-    const a = assets[id]
+  let event: MarketEventKind = null
+  let eventNote: string | null = null
+
+  // Bond: slow walk
+  {
+    const a = assets.bond
     const shock = (Math.random() * 2 - 1) * a.volatility
-    const raw = prices[id] * (1 + a.drift + shock)
-    next[id] = Math.max(1, Math.round(raw * 100) / 100)
-  })
-  return next
+    next.bond = clampPrice(prices.bond * (1 + a.drift + shock))
+  }
+
+  // Stock: noisier walk + rare event
+  {
+    const a = assets.stock
+    const roll = Math.random()
+    if (roll < 0.02) {
+      const pct = 0.12 + Math.random() * 0.08
+      next.stock = clampPrice(prices.stock * (1 + pct))
+      event = 'spike'
+      eventNote = `Market spike: Growth Stock ETF jumped +${Math.round(pct * 100)}% today.`
+    } else if (roll < 0.04) {
+      const pct = 0.12 + Math.random() * 0.1
+      next.stock = clampPrice(prices.stock * (1 - pct))
+      event = 'crash'
+      eventNote = `Market drop: Growth Stock ETF fell −${Math.round(pct * 100)}% today.`
+    } else {
+      // Two intra-day shocks so the line feels jumpy vs bonds
+      let p = prices.stock
+      for (let i = 0; i < 2; i++) {
+        const shock = (Math.random() * 2 - 1) * a.volatility
+        p = p * (1 + a.drift / 2 + shock)
+      }
+      next.stock = clampPrice(p)
+    }
+  }
+
+  return { prices: next, event, eventNote }
 }

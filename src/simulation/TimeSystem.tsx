@@ -13,6 +13,7 @@ function shouldPauseTime(): boolean {
     !!s.activeQuizId ||
     !!s.activeScenarioId ||
     s.investingPanelOpen ||
+    s.phoneOpen ||
     s.transitioning
   )
 }

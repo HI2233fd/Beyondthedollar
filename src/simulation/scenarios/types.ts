@@ -27,6 +27,10 @@ export interface ScenarioEffects {
   carDeal?: 'buy' | 'lease' | 'pass'
   /** Housing outcome at Maple Apartments. */
   homeDeal?: 'buy' | 'keep-rent' | 'pass'
+  /** Temporary weekly income reduction. */
+  hoursCut?: { weeklyLoss: number; days: number }
+  /** Increase monthly rent bill by this amount. */
+  rentHike?: number
 }
 
 export interface ScenarioChoice {

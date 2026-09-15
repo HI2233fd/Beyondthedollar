@@ -12,43 +12,47 @@ function officeDialogue(): Dialogue {
   const leave: DialogueOption = { label: 'Leave', close: true }
 
   if (g.hasJob) {
+    const weekly = Math.round(g.weeklyIncome * g.incomeFactor)
     return {
       name: NAME,
-      text: 'Good to see you on the team! You’re our Office Assistant at $16/hour, 15 hours a week. Keep it up.',
+      text: `Good to see you! Office Assistant at $16/hour. This week’s expected take-home is about $${weekly} before you see the stub on your phone.`,
       options: [leave],
     }
   }
 
-  // Build the menu once and reference it from sub-answers (cyclic, not
-  // recursive) to avoid a stack overflow when the dialogue is opened.
   const menu: Dialogue = {
     name: NAME,
-    text: 'We’re currently hiring part-time employees. Would you like to apply?',
+    text: 'We’re hiring part-time. Direct deposit required — do you have checking?',
     options: [],
   }
   menu.options = [
     {
       label: 'Apply',
-      action: () => useGame.getState().applyJob(),
-      next: {
-        name: NAME,
-        text: 'Congratulations — you’re hired! You’re now an Office Assistant at $16/hour for 15 hours a week. Your weekly income is updated to $240.',
-        options: [leave],
+      action: () => {
+        const msg = useGame.getState().applyJob()
+        if (msg) {
+          useGame.setState({
+            dialogue: {
+              name: NAME,
+              text: msg,
+              options: [leave],
+            },
+          })
+        }
       },
+      next: g.hasCheckingAccount
+        ? {
+            name: NAME,
+            text: 'Congratulations — hired as Office Assistant at $16/hour, 15 hours a week (~$240). Paystubs land on your phone.',
+            options: [leave],
+          }
+        : undefined,
     },
     {
       label: 'Ask about pay',
       next: {
         name: NAME,
-        text: 'It’s $16 an hour, 15 hours a week — about $240 weekly before taxes. We review pay every six months.',
-        options: [{ label: 'Back', next: menu }, leave],
-      },
-    },
-    {
-      label: 'Ask about the job',
-      next: {
-        name: NAME,
-        text: 'You’d handle filing, answering the phone, and helping the team stay organized. Flexible hours that work around school.',
+        text: 'It’s $16 an hour, 15 hours a week — about $240 weekly before taxes. Direct deposit to checking only.',
         options: [{ label: 'Back', next: menu }, leave],
       },
     },
