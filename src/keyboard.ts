@@ -24,7 +24,7 @@ export function initControls() {
       const g = useGame.getState()
       if (g.phoneOpen) g.closePhone()
       else if (g.investingPanelOpen) g.closeInvestingPanel()
-      else if (g.activeScenarioId && g.scenarioChoiceId) g.dismissScenario()
+      else if (g.activeScenarioId) g.dismissScenario()
       else if (g.activeQuizId) g.closeQuiz()
       else if (g.activeLessonId) g.closeLesson()
       else g.closeDialogue()

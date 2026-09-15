@@ -10,20 +10,24 @@ const SIDEWALK_OUTER = 8
 const NS_ROAD_HALF = 4.0
 
 const PARKED_CARS: { x: number; z: number; color: string; rot?: number }[] = [
-  { x: -44, z: -3.4, color: '#c0392b' },
-  { x: -30, z: -3.4, color: '#2c3e50' },
-  { x: -6, z: -3.4, color: '#ecf0f1' },
-  { x: 10, z: -3.4, color: '#7f8c8d' },
-  { x: 34, z: -3.4, color: '#2980b9' },
-  { x: -40, z: 3.4, color: '#34495e' },
-  { x: -14, z: 3.4, color: '#8e44ad' },
-  { x: 8, z: 3.4, color: '#16a085' },
-  { x: 28, z: 3.4, color: '#d35400' },
-  // north-south curb
-  { x: -3.2, z: -30, color: '#1abc9c', rot: 0 },
-  { x: 3.2, z: -18, color: '#9b59b6', rot: 0 },
-  { x: -3.2, z: 16, color: '#e67e22', rot: 0 },
-  { x: 3.2, z: 30, color: '#3498db', rot: 0 },
+  // East-west curb — leave the center intersection clear for spawn/walking
+  { x: -48, z: -3.5, color: '#c0392b' },
+  { x: -34, z: -3.5, color: '#2c3e50' },
+  { x: -20, z: -3.5, color: '#ecf0f1' },
+  { x: 20, z: -3.5, color: '#7f8c8d' },
+  { x: 34, z: -3.5, color: '#2980b9' },
+  { x: 48, z: -3.5, color: '#27ae60' },
+  { x: -48, z: 3.5, color: '#34495e' },
+  { x: -34, z: 3.5, color: '#8e44ad' },
+  { x: -20, z: 3.5, color: '#16a085' },
+  { x: 20, z: 3.5, color: '#d35400' },
+  { x: 34, z: 3.5, color: '#c0392b' },
+  { x: 48, z: 3.5, color: '#2c3e50' },
+  // north-south curb (away from z=0 intersection)
+  { x: -3.4, z: -34, color: '#1abc9c', rot: 0 },
+  { x: 3.4, z: -22, color: '#9b59b6', rot: 0 },
+  { x: -3.4, z: 22, color: '#e67e22', rot: 0 },
+  { x: 3.4, z: 34, color: '#3498db', rot: 0 },
 ]
 
 export function City() {

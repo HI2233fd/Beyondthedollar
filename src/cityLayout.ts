@@ -123,7 +123,7 @@ export function cityCollision(): AABB[] {
   return boxes
 }
 
-/** Spawn on the main avenue near the bank. */
-export const CITY_START: Spawn = { pos: [-12, 0, 2], yaw: Math.PI }
+/** Spawn on the open avenue (keep clear of curb cars). */
+export const CITY_START: Spawn = { pos: [0, 0, 0], yaw: Math.PI }
 
 export { WORLD }
