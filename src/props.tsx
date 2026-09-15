@@ -107,6 +107,118 @@ export function Streetlight({
   )
 }
 
+/** A static, non-interactive person to make interiors feel populated. */
+export function Guest({
+  position,
+  rotation = 0,
+  shirt = '#64748b',
+  pants = '#1f2937',
+  skin = '#c9956b',
+  hair = '#2b2320',
+}: {
+  position: [number, number, number]
+  rotation?: number
+  shirt?: string
+  pants?: string
+  skin?: string
+  hair?: string
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <Humanoid shirt={shirt} pants={pants} skin={skin} hair={hair} />
+    </group>
+  )
+}
+
+export function Chair({
+  position,
+  rotation = 0,
+  color = '#334155',
+}: {
+  position: [number, number, number]
+  rotation?: number
+  color?: string
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh position={[0, 0.45, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.12, 0.6]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <mesh position={[0, 0.85, -0.26]}>
+        <boxGeometry args={[0.6, 0.7, 0.1]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {[
+        [-0.24, 0.24],
+        [0.24, 0.24],
+        [-0.24, -0.24],
+        [0.24, -0.24],
+      ].map(([x, z], i) => (
+        <mesh key={i} position={[x, 0.2, z]}>
+          <cylinderGeometry args={[0.035, 0.035, 0.4, 6]} />
+          <meshStandardMaterial color="#111827" />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+export function Plant({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh position={[0, 0.3, 0]} castShadow>
+        <cylinderGeometry args={[0.32, 0.26, 0.6, 10]} />
+        <meshStandardMaterial color="#8b5e3c" />
+      </mesh>
+      <mesh position={[0, 1.0, 0]} castShadow>
+        <icosahedronGeometry args={[0.7, 1]} />
+        <meshStandardMaterial color="#3f7d44" flatShading />
+      </mesh>
+      <mesh position={[0.3, 1.35, 0.1]} castShadow>
+        <icosahedronGeometry args={[0.45, 1]} />
+        <meshStandardMaterial color="#4a8a4f" flatShading />
+      </mesh>
+    </group>
+  )
+}
+
+export function Rug({
+  position,
+  size = [4, 3],
+  color = '#8ba3c7',
+}: {
+  position: [number, number, number]
+  size?: [number, number]
+  color?: string
+}) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={position} receiveShadow>
+      <planeGeometry args={size} />
+      <meshStandardMaterial color={color} roughness={0.95} />
+    </mesh>
+  )
+}
+
+export function WallClock({ position, rotation = 0 }: { position: [number, number, number]; rotation?: number }) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.4, 0.4, 0.08, 20]} />
+        <meshStandardMaterial color="#f8fafc" />
+      </mesh>
+      <mesh position={[0, 0.12, 0.05]}>
+        <boxGeometry args={[0.04, 0.22, 0.02]} />
+        <meshStandardMaterial color="#111827" />
+      </mesh>
+      <mesh position={[0.08, 0, 0.05]} rotation={[0, 0, Math.PI / 2]}>
+        <boxGeometry args={[0.03, 0.3, 0.02]} />
+        <meshStandardMaterial color="#111827" />
+      </mesh>
+    </group>
+  )
+}
+
 /** A pedestrian that paces back and forth along the Z axis. */
 export function Pedestrian({
   position,

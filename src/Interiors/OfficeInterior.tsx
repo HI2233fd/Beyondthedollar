@@ -1,5 +1,6 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
+import { Guest, Plant, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue, type DialogueOption } from '../GameState'
 
@@ -117,6 +118,39 @@ export function OfficeInterior() {
           </group>
         </group>
       ))}
+
+      {/* Coworkers at their desks */}
+      <Guest position={[-4, 0, -1.1]} rotation={0} shirt="#0ea5e9" pants="#1f2937" />
+      <Guest position={[-4, 0, 2.4]} rotation={0} shirt="#f59e0b" skin="#8d5a3c" />
+      <Guest position={[4, 0, 2.4]} rotation={0} shirt="#a855f7" hair="#111" />
+
+      {/* Water cooler */}
+      <group position={[-7, 0, 4.5]}>
+        <mesh position={[0, 0.55, 0]} castShadow>
+          <boxGeometry args={[0.5, 1.1, 0.5]} />
+          <meshStandardMaterial color="#e5e7eb" />
+        </mesh>
+        <mesh position={[0, 1.35, 0]}>
+          <cylinderGeometry args={[0.22, 0.22, 0.5, 12]} />
+          <meshStandardMaterial color="#7dd3fc" transparent opacity={0.7} />
+        </mesh>
+      </group>
+
+      {/* Whiteboard on the left wall */}
+      <mesh position={[-7.7, 2.2, -1.5]}>
+        <boxGeometry args={[0.1, 1.6, 3.4]} />
+        <meshStandardMaterial color="#f8fafc" />
+      </mesh>
+      {[[-0.3, 0.6], [0.4, -0.4]].map(([y, z], i) => (
+        <mesh key={i} position={[-7.63, 2.2 + y, z]}>
+          <boxGeometry args={[0.02, 0.06, 1.2]} />
+          <meshStandardMaterial color={['#2563eb', '#dc2626'][i]} />
+        </mesh>
+      ))}
+
+      <Plant position={[7, 0, 4.6]} />
+      <Plant position={[7, 0, -5]} scale={0.85} />
+      <WallClock position={[0, 3.4, -6.74]} />
 
       <NPC
         id="office-manager"

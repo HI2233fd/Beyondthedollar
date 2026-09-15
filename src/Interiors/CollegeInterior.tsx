@@ -1,5 +1,6 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
+import { Guest, Chair, Plant, WallClock } from '../props'
 import { box } from '../collision'
 import type { Dialogue, DialogueOption } from '../GameState'
 
@@ -68,24 +69,50 @@ export function CollegeInterior() {
         <meshStandardMaterial color="#b91c1c" emissive="#7f1d1d" emissiveIntensity={0.25} />
       </mesh>
 
-      {/* Lobby seating */}
-      {[-5, 5].map((x) => (
-        <mesh key={x} position={[x, 0.35, 2.5]} castShadow>
-          <boxGeometry args={[2.4, 0.5, 0.9]} />
-          <meshStandardMaterial color="#475569" />
+      {/* Lobby seating rows */}
+      {[-5.5, -4.2, -2.9].map((x) => (
+        <Chair key={`r1${x}`} position={[x, 0, 2.4]} rotation={Math.PI} color="#475569" />
+      ))}
+      {[-5.5, -4.2, -2.9].map((x) => (
+        <Chair key={`r2${x}`} position={[x, 0, 3.7]} color="#475569" />
+      ))}
+
+      {/* Students waiting */}
+      <Guest position={[-5.5, 0, 2.4]} rotation={0} shirt="#2563eb" hair="#3b2f2f" />
+      <Guest position={[-2.9, 0, 3.7]} rotation={Math.PI} shirt="#dc2626" skin="#8d5a3c" />
+      <Guest position={[4, 0, 2]} rotation={-2.2} shirt="#059669" pants="#1f2937" />
+
+      {/* Bookshelf along the right wall */}
+      <group position={[7.2, 0, 0]}>
+        <mesh position={[0, 1.4, 0]} castShadow>
+          <boxGeometry args={[0.5, 2.8, 5]} />
+          <meshStandardMaterial color="#6b4f2a" />
+        </mesh>
+        {[0.6, 1.4, 2.2].map((y) =>
+          [-1.6, -0.5, 0.6, 1.7].map((z) => (
+            <mesh key={`${y}-${z}`} position={[-0.28, y, z]}>
+              <boxGeometry args={[0.06, 0.5, 0.7]} />
+              <meshStandardMaterial color={['#ef4444', '#3b82f6', '#f59e0b', '#10b981'][Math.floor(Math.abs(z))% 4]} />
+            </mesh>
+          )),
+        )}
+      </group>
+
+      {/* Bulletin board */}
+      <mesh position={[-7.7, 1.8, 0]}>
+        <boxGeometry args={[0.1, 1.6, 3]} />
+        <meshStandardMaterial color="#8b5e3c" />
+      </mesh>
+      {[[-0.6, 0.9], [0.5, 0.6], [-0.3, -0.7], [0.6, -0.5]].map(([y, z], i) => (
+        <mesh key={i} position={[-7.63, 1.8 + y, z]}>
+          <planeGeometry args={[0.5, 0.6]} />
+          <meshStandardMaterial color={['#fef3c7', '#dbeafe', '#dcfce7', '#fce7f3'][i]} />
         </mesh>
       ))}
-      {/* Potted plant */}
-      <group position={[6, 0, -1]}>
-        <mesh position={[0, 0.3, 0]}>
-          <cylinderGeometry args={[0.35, 0.28, 0.6, 10]} />
-          <meshStandardMaterial color="#8b5e3c" />
-        </mesh>
-        <mesh position={[0, 1, 0]}>
-          <icosahedronGeometry args={[0.7, 1]} />
-          <meshStandardMaterial color="#3f7d44" flatShading />
-        </mesh>
-      </group>
+
+      <Plant position={[6.4, 0, -1]} />
+      <Plant position={[-6.6, 0, 4.6]} scale={0.85} />
+      <WallClock position={[0, 3.3, -6.24]} />
 
       <NPC
         id="college-counselor"

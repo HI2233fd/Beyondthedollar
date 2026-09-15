@@ -1,5 +1,6 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
+import { Guest, Chair, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue } from '../GameState'
 
@@ -48,9 +49,11 @@ export function BankInterior() {
       d={13}
       floor="#d8d2c4"
       wall="#eef1f5"
-      extraBoxes={[box(0, -3.4, 9, 1), box(-5.5, -1, 2.5, 3)]}
+      extraBoxes={[box(0, -3.4, 9, 1), box(-6.6, 3.2, 1.4, 4), box(6.6, -2, 1.2, 3)]}
     >
-      {/* Teller counter */}
+      <Rug position={[0, 0.02, 1.5]} size={[9, 5]} color="#8399bd" />
+
+      {/* Teller counter with glass partitions */}
       <mesh position={[0, 0.6, -3.4]} castShadow>
         <boxGeometry args={[9, 1.2, 1]} />
         <meshStandardMaterial color="#6b4f2a" />
@@ -59,39 +62,75 @@ export function BankInterior() {
         <boxGeometry args={[9, 0.1, 1.2]} />
         <meshStandardMaterial color="#3f2d18" />
       </mesh>
-      {/* Back wall panels / logo strip */}
+      {[-3, 0, 3].map((x) => (
+        <mesh key={x} position={[x, 1.9, -3.4]}>
+          <boxGeometry args={[0.06, 1.1, 1]} />
+          <meshStandardMaterial color="#bfe3ff" metalness={0.4} roughness={0.1} transparent opacity={0.35} />
+        </mesh>
+      ))}
+      {/* Monitors on the counter */}
+      {[-3, 3].map((x) => (
+        <mesh key={x} position={[x, 1.55, -3.7]}>
+          <boxGeometry args={[0.6, 0.4, 0.05]} />
+          <meshStandardMaterial color="#0b1220" emissive="#1e3a5f" emissiveIntensity={0.5} />
+        </mesh>
+      ))}
+
+      {/* Back wall logo strip + clock */}
       <mesh position={[0, 3, -6.3]}>
         <boxGeometry args={[10, 1.4, 0.1]} />
         <meshStandardMaterial color="#0ea5e9" emissive="#0369a1" emissiveIntensity={0.3} />
       </mesh>
+      <WallClock position={[6.4, 3.2, -6.24]} />
 
-      {/* Waiting chairs */}
-      {[-5.5, -4, -2.5].map((x) => (
-        <group key={x} position={[x, 0, 2]}>
-          <mesh position={[0, 0.45, 0]} castShadow>
-            <boxGeometry args={[0.9, 0.15, 0.9]} />
-            <meshStandardMaterial color="#334155" />
-          </mesh>
-          <mesh position={[0, 0.9, -0.4]}>
-            <boxGeometry args={[0.9, 0.9, 0.12]} />
-            <meshStandardMaterial color="#334155" />
-          </mesh>
-          {[-0.35, 0.35].map((lx) =>
-            [-0.35, 0.35].map((lz) => (
-              <mesh key={`${lx}-${lz}`} position={[lx, 0.2, lz]}>
-                <cylinderGeometry args={[0.04, 0.04, 0.4, 6]} />
-                <meshStandardMaterial color="#111827" />
-              </mesh>
-            )),
-          )}
-        </group>
+      {/* ATM near the entrance */}
+      <group position={[-6.7, 0, 3.4]}>
+        <mesh position={[0, 1.1, 0]} castShadow>
+          <boxGeometry args={[0.9, 2.2, 0.7]} />
+          <meshStandardMaterial color="#1f2937" />
+        </mesh>
+        <mesh position={[0, 1.5, 0.36]}>
+          <boxGeometry args={[0.6, 0.45, 0.05]} />
+          <meshStandardMaterial color="#0b1220" emissive="#22c55e" emissiveIntensity={0.4} />
+        </mesh>
+      </group>
+
+      {/* Queue posts with rope */}
+      {[1.2, 2.6, 4].map((z) => (
+        <mesh key={z} position={[1.5, 0.5, z]}>
+          <cylinderGeometry args={[0.08, 0.1, 1, 8]} />
+          <meshStandardMaterial color="#9ca3af" metalness={0.6} />
+        </mesh>
       ))}
 
-      {/* Employee behind the counter */}
+      {/* Waiting area: chairs + coffee table + plants */}
+      {[-6.2, -5, -3.8].map((x) => (
+        <Chair key={x} position={[x, 0, 2.2]} rotation={Math.PI} />
+      ))}
+      {[-6.2, -5, -3.8].map((x) => (
+        <Chair key={`b${x}`} position={[x, 0, 3.6]} />
+      ))}
+      <mesh position={[-5, 0.35, 2.9]} castShadow>
+        <boxGeometry args={[1.4, 0.1, 0.8]} />
+        <meshStandardMaterial color="#5a4632" />
+      </mesh>
+      <Plant position={[-7, 0, -5.2]} />
+      <Plant position={[7, 0, 4.8]} scale={0.85} />
+
+      {/* Guests / customers */}
+      <Guest position={[-6.2, 0, 2.2]} rotation={0} shirt="#b45309" />
+      <Guest position={[-3.8, 0, 3.6]} rotation={Math.PI} shirt="#7c3aed" skin="#8d5a3c" />
+      <Guest position={[1.5, 0, 0.5]} rotation={Math.PI} shirt="#0891b2" pants="#374151" />
+      <Guest position={[3.2, 0, 1.4]} rotation={Math.PI + 0.4} shirt="#be123c" skin="#a9754f" hair="#111" />
+
+      {/* Second teller (non-interactive) */}
+      <Guest position={[-3, 0, -2.6]} rotation={0} shirt="#0f766e" />
+
+      {/* Interactive teller */}
       <NPC
         id="bank-teller"
         scene="bank"
-        position={[0, 0, -2.4]}
+        position={[2.5, 0, -2.4]}
         rotation={0}
         name="Marcus"
         shirt="#0f766e"

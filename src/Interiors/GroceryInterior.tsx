@@ -1,6 +1,7 @@
 import { Billboard, Text } from '@react-three/drei'
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
+import { Guest, Plant } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
@@ -112,7 +113,7 @@ export function GroceryInterior() {
       wall="#f3f1ea"
       extraBoxes={[box(0, -1, 16, 1.4), box(0, -4.2, 16, 1.4), box(-6, 4, 2.6, 1.2)]}
     >
-      {/* Shelves */}
+      {/* Shelves (with stocked goods on the back shelf) */}
       {[-1, -4.2].map((z) => (
         <group key={z} position={[0, 0, z]}>
           <mesh position={[0, 0.9, 0]} castShadow>
@@ -125,11 +126,66 @@ export function GroceryInterior() {
           </mesh>
         </group>
       ))}
+      {/* Assorted stock on the back shelf */}
+      {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ec4899', '#eab308', '#14b8a6'].map((c, i) => (
+        <group key={i} position={[-6.5 + i * 1.9, 0, -4.2]}>
+          {[1.1, 1.55].map((y) => (
+            <mesh key={y} position={[0, y, 0.35]} castShadow>
+              <boxGeometry args={[0.34, 0.36, 0.3]} />
+              <meshStandardMaterial color={c} />
+            </mesh>
+          ))}
+        </group>
+      ))}
+
+      {/* Aisle direction signs */}
+      {[-4, 0, 4].map((x, i) => (
+        <Billboard key={x} position={[x, 3.2, -1]}>
+          <Text fontSize={0.34} color="#0f172a" anchorX="center" anchorY="middle" outlineWidth={0.01} outlineColor="#fff">
+            {['Aisle 1', 'Aisle 2', 'Aisle 3'][i]}
+          </Text>
+        </Billboard>
+      ))}
+
+      {/* Produce table near the entrance */}
+      <group position={[6, 0, 2]}>
+        <mesh position={[0, 0.5, 0]} castShadow>
+          <boxGeometry args={[2.4, 0.9, 1.6]} />
+          <meshStandardMaterial color="#8b5e3c" />
+        </mesh>
+        {[['#ef4444', -0.6], ['#f59e0b', 0], ['#22c55e', 0.6]].map(([c, ox], i) => (
+          <mesh key={i} position={[ox as number, 1.05, 0]} castShadow>
+            <sphereGeometry args={[0.28, 10, 10]} />
+            <meshStandardMaterial color={c as string} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Shopping carts near the entrance */}
+      {[[-4, 5.2], [-4.9, 5.2]].map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, 0.55, 0]}>
+            <boxGeometry args={[0.7, 0.5, 1]} />
+            <meshStandardMaterial color="#9ca3af" metalness={0.4} wireframe />
+          </mesh>
+          <mesh position={[0, 0.2, 0.5]}>
+            <cylinderGeometry args={[0.12, 0.12, 0.05, 12]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+        </group>
+      ))}
+
+      <Plant position={[6.8, 0, -5]} />
 
       {/* Product stands (front shelf) */}
       {PRODUCTS.map((p, i) => (
         <ProductStand key={p.id} product={p} x={-6 + i * 3} />
       ))}
+
+      {/* Shoppers */}
+      <Guest position={[3, 0, 1]} rotation={Math.PI} shirt="#0ea5e9" pants="#374151" />
+      <Guest position={[-2, 0, -2.6]} rotation={0} shirt="#f97316" skin="#8d5a3c" />
+      <Guest position={[5.5, 0, 3.5]} rotation={-2.3} shirt="#84cc16" hair="#3b2f2f" />
 
       <Checkout />
 
