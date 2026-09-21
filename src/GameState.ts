@@ -29,6 +29,24 @@ import {
   HOME_DOWN_PAYMENT,
   INVEST_SAVINGS_MIN,
 } from './simulation/progression'
+import { HOME_BEDROOM_START } from './cityLayout'
+import {
+  type CharacterAppearance,
+  type LifeGoalId,
+  type Mission,
+  type NpcRelation,
+  type Season,
+  type SkillId,
+  type Skills,
+  DEFAULT_APPEARANCE,
+  DEFAULT_SKILLS,
+  DOWNTOWN_UNLOCK_LEVEL,
+  professionalFromTalks,
+  relationTierFromAffinity,
+  xpNeededForLevel,
+} from './life/types'
+import { ACHIEVEMENT_DEFS, createFirstDayMission, createPersonalizedOpportunity } from './life/missions'
+import { clearSave, emptyLifeDefaults, loadSave, writeSave, type SaveBlob } from './life/save'
 
 export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
 
@@ -169,11 +187,44 @@ interface GameState {
   carStatus: CarStatus
   homeStatus: HomeStatus
 
+  /** Life sim — character, progression, relationships, missions, save */
+  characterCreated: boolean
+  playerName: string
+  playerAge: number
+  appearance: CharacterAppearance
+  goals: LifeGoalId[]
+  lifeLevel: number
+  xp: number
+  skills: Skills
+  relationships: Record<string, NpcRelation>
+  missions: Mission[]
+  discoveredLocations: string[]
+  achievements: Record<string, number | null>
+  decisions: string[]
+  season: Season
+  firstDayStarted: boolean
+
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
   closeDialogue: () => void
   enterScene: (scene: SceneId, spawn: Spawn) => void
   finishTransition: () => void
+
+  beginLife: (name: string, age: number, appearance: CharacterAppearance, goals: LifeGoalId[]) => void
+  continueFromSave: () => boolean
+  hasSaveGame: () => boolean
+  newGameWipe: () => void
+  autosave: () => void
+  awardXp: (amount: number, reason?: string) => void
+  xpToNext: () => number
+  bumpSkill: (skill: SkillId, amount?: number) => void
+  talkToNpc: (npcId: string, displayName: string, memory?: string) => void
+  completeMissionObjective: (missionId: string, objectiveId: string) => void
+  discoverLocation: (id: string) => void
+  unlockAchievement: (id: string) => void
+  rememberDecision: (id: string) => void
+  syncSeasonFromTime: () => void
+  downtownUnlocked: () => boolean
 
   openCheckingAccount: () => void
   deposit: (amount: number) => string | null
@@ -259,6 +310,165 @@ type UseGameStore = UseBoundStore<StoreApi<GameState>>
 /** Survives Vite HMR so Phone/HUD/NPC never diverge onto a fresh empty store. */
 const STORE_GLOBAL = '__beyondTheDollarUseGame' as const
 
+type Persistable = ReturnType<typeof emptyLifeDefaults> & {
+  cash: number
+  bank: number
+  savings: number
+  weeklyIncome: number
+  monthlyExpenses: number
+  creditScore: number
+  creditEstablished: boolean
+  debt: number
+  education: string
+  career: string
+  transportationAvailable: boolean
+  hasCheckingAccount: boolean
+  hasCreditCard: boolean
+  hasJob: boolean
+  incomeFactor: number
+  incomeFactorUntil: number
+  nextPaydayAt: number
+  completedTopicIds: string[]
+  unlockedUnitNumber: number
+  totalMinutes: number
+  timeScale: number
+  firedTriggerIds: string[]
+  engagedScenarioIds: string[]
+  recurringBills: RecurringBill[]
+  dueBillIds: string[]
+  nextRandomExpenseAt: number
+  randomExpenseCount: number
+  assetPrices: Record<AssetId, number>
+  holdings: Holdings
+  lastPriceDayIndex: number
+  investingIntroSeen: boolean
+  paystubs: Paystub[]
+  ledger: LedgerEntry[]
+  carStatus: CarStatus
+  homeStatus: HomeStatus
+  scene: SceneId
+}
+
+function toSaveBlob(s: Persistable): SaveBlob {
+  return {
+    version: 1,
+    savedAt: Date.now(),
+    characterCreated: s.characterCreated,
+    playerName: s.playerName,
+    playerAge: s.playerAge,
+    appearance: s.appearance,
+    goals: s.goals,
+    lifeLevel: s.lifeLevel,
+    xp: s.xp,
+    skills: s.skills,
+    relationships: s.relationships,
+    missions: s.missions,
+    discoveredLocations: s.discoveredLocations,
+    achievements: s.achievements,
+    decisions: s.decisions,
+    season: s.season,
+    firstDayStarted: s.firstDayStarted,
+    cash: s.cash,
+    bank: s.bank,
+    savings: s.savings,
+    weeklyIncome: s.weeklyIncome,
+    monthlyExpenses: s.monthlyExpenses,
+    creditScore: s.creditScore,
+    creditEstablished: s.creditEstablished,
+    debt: s.debt,
+    education: s.education,
+    career: s.career,
+    transportationAvailable: s.transportationAvailable,
+    hasCheckingAccount: s.hasCheckingAccount,
+    hasCreditCard: s.hasCreditCard,
+    hasJob: s.hasJob,
+    incomeFactor: s.incomeFactor,
+    incomeFactorUntil: s.incomeFactorUntil,
+    nextPaydayAt: s.nextPaydayAt,
+    completedTopicIds: s.completedTopicIds,
+    unlockedUnitNumber: s.unlockedUnitNumber,
+    totalMinutes: s.totalMinutes,
+    timeScale: s.timeScale,
+    firedTriggerIds: s.firedTriggerIds,
+    engagedScenarioIds: s.engagedScenarioIds,
+    recurringBills: s.recurringBills,
+    dueBillIds: s.dueBillIds,
+    nextRandomExpenseAt: s.nextRandomExpenseAt,
+    randomExpenseCount: s.randomExpenseCount,
+    assetPrices: s.assetPrices,
+    holdings: { ...s.holdings },
+    lastPriceDayIndex: s.lastPriceDayIndex,
+    investingIntroSeen: s.investingIntroSeen,
+    paystubs: s.paystubs,
+    ledger: s.ledger,
+    carStatus: s.carStatus,
+    homeStatus: s.homeStatus,
+    scene: s.scene,
+  }
+}
+
+function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlob) {
+  set({
+    characterCreated: true,
+    playerName: blob.playerName,
+    playerAge: blob.playerAge,
+    appearance: blob.appearance,
+    goals: blob.goals,
+    lifeLevel: blob.lifeLevel,
+    xp: blob.xp,
+    skills: blob.skills,
+    relationships: blob.relationships,
+    missions: blob.missions,
+    discoveredLocations: blob.discoveredLocations,
+    achievements: blob.achievements,
+    decisions: blob.decisions,
+    season: blob.season,
+    firstDayStarted: true,
+    cash: blob.cash,
+    bank: blob.bank,
+    savings: blob.savings,
+    weeklyIncome: blob.weeklyIncome,
+    monthlyExpenses: blob.monthlyExpenses,
+    creditScore: blob.creditScore,
+    creditEstablished: blob.creditEstablished,
+    debt: blob.debt,
+    education: blob.education,
+    career: blob.career,
+    transportationAvailable: blob.transportationAvailable,
+    hasCheckingAccount: blob.hasCheckingAccount,
+    hasCreditCard: blob.hasCreditCard,
+    hasJob: !!blob.hasJob,
+    incomeFactor: blob.incomeFactor,
+    incomeFactorUntil: blob.incomeFactorUntil,
+    nextPaydayAt: blob.nextPaydayAt,
+    completedTopicIds: blob.completedTopicIds,
+    unlockedUnitNumber: blob.unlockedUnitNumber,
+    totalMinutes: blob.totalMinutes,
+    timeScale: blob.timeScale,
+    firedTriggerIds: blob.firedTriggerIds,
+    engagedScenarioIds: blob.engagedScenarioIds,
+    recurringBills: blob.recurringBills as RecurringBill[],
+    dueBillIds: blob.dueBillIds,
+    nextRandomExpenseAt: blob.nextRandomExpenseAt,
+    randomExpenseCount: blob.randomExpenseCount,
+    assetPrices: blob.assetPrices as Record<AssetId, number>,
+    holdings: blob.holdings as unknown as Holdings,
+    lastPriceDayIndex: blob.lastPriceDayIndex,
+    investingIntroSeen: blob.investingIntroSeen,
+    paystubs: blob.paystubs as Paystub[],
+    ledger: blob.ledger as LedgerEntry[],
+    carStatus: blob.carStatus as CarStatus,
+    homeStatus: blob.homeStatus as HomeStatus,
+    scene: (blob.scene as SceneId) || 'home',
+    spawn: blob.scene === 'city' ? { pos: [0, 0, 0], yaw: Math.PI } : HOME_BEDROOM_START,
+    transitioning: true,
+    phoneOpen: false,
+    dialogue: null,
+    prompt: null,
+    lastBillNotice: `Welcome back, ${blob.playerName}`,
+  })
+}
+
 function createGameStore(): UseGameStore {
   return create<GameState>((set, get) => ({
   cash: GRADUATION_CASH,
@@ -336,6 +546,8 @@ function createGameStore(): UseGameStore {
   carStatus: 'none',
   homeStatus: 'renting',
 
+  ...emptyLifeDefaults(),
+
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
   },
@@ -356,6 +568,167 @@ function createGameStore(): UseGameStore {
     }),
   finishTransition: () => set({ transitioning: false }),
 
+  beginLife: (name, age, appearance, goals) => {
+    const firstDay = createFirstDayMission()
+    const opportunity = createPersonalizedOpportunity(goals)
+    const achievements: Record<string, number | null> = {}
+    for (const a of ACHIEVEMENT_DEFS) achievements[a.id] = null
+    set({
+      characterCreated: true,
+      playerName: name,
+      playerAge: age,
+      appearance: { ...appearance },
+      goals: [...goals],
+      lifeLevel: 1,
+      xp: 0,
+      skills: { ...DEFAULT_SKILLS },
+      relationships: {},
+      missions: [firstDay, opportunity],
+      discoveredLocations: ['home'],
+      achievements,
+      decisions: [],
+      season: 'summer',
+      firstDayStarted: true,
+      scene: 'home',
+      spawn: HOME_BEDROOM_START,
+      transitioning: true,
+      dialogue: null,
+      prompt: null,
+      phoneOpen: false,
+      lastBillNotice: `Welcome, ${name}. Your first day starts at home.`,
+    })
+    get().autosave()
+  },
+  hasSaveGame: () => !!loadSave(),
+  continueFromSave: () => {
+    const blob = loadSave()
+    if (!blob) return false
+    applySaveBlob(set, blob)
+    return true
+  },
+  newGameWipe: () => {
+    clearSave()
+    set({ ...emptyLifeDefaults(), appearance: { ...DEFAULT_APPEARANCE }, skills: { ...DEFAULT_SKILLS } })
+  },
+  autosave: () => {
+    const s = get()
+    if (!s.characterCreated) return
+    writeSave(toSaveBlob(s))
+  },
+  awardXp: (amount, reason) => {
+    if (amount <= 0) return
+    const s = get()
+    let xp = s.xp + amount
+    let lifeLevel = s.lifeLevel
+    let leveled = false
+    let need = xpNeededForLevel(lifeLevel)
+    while (xp >= need) {
+      xp -= need
+      lifeLevel += 1
+      leveled = true
+      need = xpNeededForLevel(lifeLevel)
+    }
+    set({
+      xp,
+      lifeLevel,
+      lastBillNotice: leveled
+        ? `Level up! Life Level ${lifeLevel}${reason ? ` · ${reason}` : ''}`
+        : reason
+          ? `+${amount} XP · ${reason}`
+          : s.lastBillNotice,
+    })
+    if (leveled && lifeLevel >= DOWNTOWN_UNLOCK_LEVEL) {
+      get().unlockAchievement('downtown-unlocked')
+    }
+    get().autosave()
+  },
+  xpToNext: () => xpNeededForLevel(get().lifeLevel),
+  bumpSkill: (skill, amount = 0.25) => {
+    const skills = { ...get().skills }
+    skills[skill] = Math.min(5, Math.round((skills[skill] + amount) * 100) / 100)
+    set({ skills })
+  },
+  talkToNpc: (npcId, displayName, memory) => {
+    const s = get()
+    const prev = s.relationships[npcId]
+    const talks = (prev?.talks ?? 0) + 1
+    const affinity = Math.min(100, (prev?.affinity ?? 0) + (prev?.met ? 4 : 10))
+    const memories = [...(prev?.memories ?? [])]
+    if (memory && !memories.includes(memory)) memories.push(memory)
+    if (memories.length > 8) memories.shift()
+    const next: NpcRelation = {
+      affinity,
+      met: true,
+      talks,
+      tier: relationTierFromAffinity(affinity),
+      professional: professionalFromTalks(talks, affinity),
+      memories,
+      lastTalkAt: s.totalMinutes,
+    }
+    set({ relationships: { ...s.relationships, [npcId]: next } })
+    get().completeMissionObjective('first-day', 'meet-someone')
+    if (talks === 1) get().awardXp(25, `Met ${displayName}`)
+    else if (talks % 3 === 0) {
+      get().awardXp(15, `${displayName} · ${next.tier}`)
+      get().bumpSkill('communication', 0.15)
+    }
+  },
+  completeMissionObjective: (missionId, objectiveId) => {
+    const s = get()
+    const before = s.missions.find((m) => m.id === missionId)
+    if (!before || before.completed) return
+    if (before.objectives.find((o) => o.id === objectiveId)?.done) return
+
+    const missions = s.missions.map((m) => {
+      if (m.id !== missionId) return m
+      const objectives = m.objectives.map((o) => (o.id === objectiveId ? { ...o, done: true } : o))
+      return { ...m, objectives, completed: objectives.every((o) => o.done) }
+    })
+    set({ missions })
+    const after = missions.find((m) => m.id === missionId)
+    if (!after?.completed) return
+
+    if (after.rewardXp) get().awardXp(after.rewardXp, after.title)
+    if (after.rewardCash) set({ cash: get().cash + after.rewardCash })
+    if (missionId === 'first-day') {
+      get().unlockAchievement('first-day-done')
+      get().bumpSkill('problemSolving', 0.2)
+      set({ lastBillNotice: 'First day complete — your personalized opportunity is waiting' })
+    }
+    if (missionId === 'first-opportunity') {
+      get().bumpSkill('financial', 0.35)
+      get().bumpSkill('business', 0.2)
+    }
+    get().autosave()
+  },
+  discoverLocation: (id) => {
+    const s = get()
+    if (s.discoveredLocations.includes(id)) return
+    set({ discoveredLocations: [...s.discoveredLocations, id] })
+    if (id !== 'home') get().awardXp(10, `Discovered ${id}`)
+  },
+  unlockAchievement: (id) => {
+    const s = get()
+    if (s.achievements[id] != null) return
+    set({
+      achievements: { ...s.achievements, [id]: s.totalMinutes },
+      lastBillNotice: `Achievement · ${ACHIEVEMENT_DEFS.find((a) => a.id === id)?.title ?? id}`,
+    })
+    get().awardXp(40, 'Achievement')
+  },
+  rememberDecision: (id) => {
+    const s = get()
+    if (s.decisions.includes(id)) return
+    set({ decisions: [...s.decisions, id] })
+  },
+  syncSeasonFromTime: () => {
+    const { month } = stampFromMinutes(get().totalMinutes)
+    const season: Season =
+      month >= 3 && month <= 5 ? 'spring' : month >= 6 && month <= 8 ? 'summer' : month >= 9 && month <= 11 ? 'fall' : 'winter'
+    if (get().season !== season) set({ season })
+  },
+  downtownUnlocked: () => get().lifeLevel >= DOWNTOWN_UNLOCK_LEVEL,
+
   openCheckingAccount: () => {
     const s = get()
     if (s.hasCheckingAccount) return
@@ -367,6 +740,10 @@ function createGameStore(): UseGameStore {
       creditEstablished: true,
       creditScore: s.creditEstablished ? s.creditScore : CREDIT_SCORE_ON_FILE,
     })
+    get().awardXp(50, 'Opened checking')
+    get().bumpSkill('financial', 0.3)
+    get().completeMissionObjective('first-opportunity', 'open-checking')
+    get().autosave()
   },
   deposit: (amount) => {
     const s = get()
@@ -402,6 +779,9 @@ function createGameStore(): UseGameStore {
       creditEstablished: true,
       creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
     })
+    get().completeMissionObjective('first-opportunity', 'shop-or-save')
+    get().bumpSkill('financial', 0.15)
+    get().autosave()
     return null
   },
   transferToSavings: (amount) => {
@@ -414,6 +794,10 @@ function createGameStore(): UseGameStore {
       creditEstablished: true,
       creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
     })
+    if (amt > 0) {
+      get().completeMissionObjective('first-opportunity', 'shop-or-save')
+      get().autosave()
+    }
     return null
   },
   applyForCreditCard: () => {
@@ -476,6 +860,12 @@ function createGameStore(): UseGameStore {
         interviewAsked: 0,
         lastBillNotice: 'Hired · Office Assistant — check Phone for job & payday',
       })
+      get().awardXp(80, 'Hired')
+      get().bumpSkill('communication', 0.3)
+      get().bumpSkill('problemSolving', 0.2)
+      get().completeMissionObjective('first-opportunity', 'get-hired')
+      get().rememberDecision(`hired-summit-${score}`)
+      get().autosave()
       return { hired: true, message }
     }
     set({ interviewActive: false, interviewCorrect: 0, interviewAsked: 0 })
@@ -492,6 +882,13 @@ function createGameStore(): UseGameStore {
     const total = cart.reduce((sum, i) => sum + i.price, 0)
     const paid = Math.min(total, cash)
     set({ cash: cash - paid, cart: [] })
+    if (paid > 0) {
+      get().completeMissionObjective('first-opportunity', 'shop-or-save')
+      get().bumpSkill('financial', 0.1)
+      get().awardXp(15, 'Grocery run')
+      get().rememberDecision(`grocery-${Math.round(paid)}`)
+      get().autosave()
+    }
     return total
   },
 
@@ -561,18 +958,19 @@ function createGameStore(): UseGameStore {
     }
 
     let bank = prev.bank
-    let savings = prev.savings
-    let cash = prev.cash
-    let debt = prev.debt
-    let creditScore = prev.creditScore
-    let creditEstablished = prev.creditEstablished
+    const savings = prev.savings
+    const cash = prev.cash
+    const debt = prev.debt
+    const creditScore = prev.creditScore
+    const creditEstablished = prev.creditEstablished
     let lastBillNotice = prev.lastBillNotice
-    let recentlyMissedBill = prev.recentlyMissedBill
+    const recentlyMissedBill = prev.recentlyMissedBill
     let ledger = prev.ledger
     let paystubs = prev.paystubs
     let nextPaydayAt = prev.nextPaydayAt
-    let dueBillIds = [...prev.dueBillIds]
+    const dueBillIds = [...prev.dueBillIds]
     const recurringBills = prev.recurringBills.map((b) => ({ ...b }))
+    let paydayHit = false
 
     // Paydays (weekly) — require checking for direct deposit
     if (prev.hasJob && prev.hasCheckingAccount) {
@@ -601,6 +999,7 @@ function createGameStore(): UseGameStore {
         })
         lastBillNotice = `Paycheck deposited: $${net}`
         nextPaydayAt += 7 * MINUTES_PER_DAY
+        paydayHit = true
       }
     }
 
@@ -635,6 +1034,13 @@ function createGameStore(): UseGameStore {
       paystubs,
       nextPaydayAt,
     })
+    if (paydayHit) {
+      get().completeMissionObjective('first-opportunity', 'first-paycheck')
+      get().unlockAchievement('first-paycheck')
+      get().awardXp(60, 'Paycheck')
+      get().bumpSkill('financial', 0.1)
+      get().autosave()
+    }
   },
   setTimeScale: (scale) => set({ timeScale: Math.max(0, scale) }),
 
@@ -1009,8 +1415,10 @@ function createGameStore(): UseGameStore {
   dismissBillNotice: () => set({ lastBillNotice: null }),
   dismissMarketNotice: () => set({ lastMarketNotice: null }),
 
-  openPhone: () =>
-    set({ phoneOpen: true, dialogue: null, prompt: null, investingPanelOpen: false }),
+  openPhone: () => {
+    set({ phoneOpen: true, dialogue: null, prompt: null, investingPanelOpen: false })
+    get().completeMissionObjective('first-day', 'open-phone')
+  },
   closePhone: () => set({ phoneOpen: false }),
 
   openInvestingPanel: () => {

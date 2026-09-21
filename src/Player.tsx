@@ -18,6 +18,8 @@ export function Player() {
 
   const scene = useGame((s) => s.scene)
   const spawn = useGame((s) => s.spawn)
+  const appearance = useGame((s) => s.appearance)
+  const body = appearance.body
 
   // Place the player when a scene/spawn is set.
   useEffect(() => {
@@ -66,11 +68,13 @@ export function Player() {
     const moving = len > 0.001
     rig.moving.current = moving
 
+    const speed = body === 'athletic' ? SPEED * 1.08 : body === 'slim' ? SPEED * 1.02 : SPEED
+
     if (moving) {
       dx /= len
       dz /= len
-      const nx = g.position.x + dx * SPEED * dt
-      const nz = g.position.z + dz * SPEED * dt
+      const nx = g.position.x + dx * speed * dt
+      const nz = g.position.z + dz * speed * dt
       const res = resolveMovement(g.position.x, g.position.z, nx, nz, RADIUS, getActiveBoxes())
       g.position.x = res.x
       g.position.z = res.z
@@ -92,8 +96,16 @@ export function Player() {
   })
 
   return (
-    <group ref={mergeRefs(rig.groupRef, localRef)}>
-      <Humanoid shirt="#2563eb" pants="#1f2937" skin="#d0996b" hair="#241a12" walkRef={rig.walk} movingRef={rig.moving} />
+    <group ref={mergeRefs(rig.groupRef, localRef)} scale={body === 'slim' ? 0.95 : body === 'athletic' ? 1.05 : 1}>
+      <Humanoid
+        shirt={appearance.shirt}
+        pants={appearance.pants}
+        skin={appearance.skin}
+        hair={appearance.hair}
+        face={appearance.face}
+        walkRef={rig.walk}
+        movingRef={rig.moving}
+      />
       {/* soft contact shadow */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.5, 16]} />

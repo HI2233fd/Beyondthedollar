@@ -109,14 +109,21 @@ export function exitSpawn(b: BuildingDef): Spawn {
   }
 }
 
-/** Expanded playable area — more street to walk. */
+/**
+ * Starter district playable bounds.
+ * East edge is a soft gate — Downtown skyline is visible beyond but blocked until Life Level 10.
+ */
 const WORLD = { minX: -58, maxX: 58, minZ: -42, maxZ: 42 }
+
+/** X where the Downtown gate / skyline begins (just past playable maxX). */
+export const WORLD_EAST_GATE = WORLD.maxX
 
 export function cityCollision(): AABB[] {
   const boxes: AABB[] = []
   for (const b of BUILDINGS) boxes.push(box(b.x, b.z, b.w, b.d))
   const t = 2
   boxes.push({ minX: WORLD.minX - t, maxX: WORLD.minX, minZ: WORLD.minZ - t, maxZ: WORLD.maxZ + t })
+  // Soft east gate — dense wall so Downtown silhouette stays visible but unenterable until unlock.
   boxes.push({ minX: WORLD.maxX, maxX: WORLD.maxX + t, minZ: WORLD.minZ - t, maxZ: WORLD.maxZ + t })
   boxes.push({ minX: WORLD.minX - t, maxX: WORLD.maxX + t, minZ: WORLD.minZ - t, maxZ: WORLD.minZ })
   boxes.push({ minX: WORLD.minX - t, maxX: WORLD.maxX + t, minZ: WORLD.maxZ, maxZ: WORLD.maxZ + t })
@@ -125,5 +132,8 @@ export function cityCollision(): AABB[] {
 
 /** Spawn on the open avenue (keep clear of curb cars). */
 export const CITY_START: Spawn = { pos: [0, 0, 0], yaw: Math.PI }
+
+/** Bedroom spawn for new life / home load. */
+export const HOME_BEDROOM_START: Spawn = { pos: [-3.2, 0, -2.8], yaw: 0.4 }
 
 export { WORLD }

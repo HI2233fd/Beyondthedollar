@@ -29,14 +29,21 @@ export function NPC({
   getDialogue,
 }: NPCProps) {
   const openDialogue = useGame((s) => s.openDialogue)
+  const talkToNpc = useGame((s) => s.talkToNpc)
+  const relation = useGame((s) => s.relationships[id])
 
   useInteractable({
     id: `npc-${id}`,
     scene,
     position,
     radius: 2.6,
-    prompt: `Talk to ${name}`,
-    onInteract: () => openDialogue(getDialogue()),
+    prompt: relation?.met
+      ? `Talk to ${name} (${relation.tier})`
+      : `Talk to ${name}`,
+    onInteract: () => {
+      talkToNpc(id, name, `Talked in ${scene}`)
+      openDialogue(getDialogue())
+    },
   })
 
   return (

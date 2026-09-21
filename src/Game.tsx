@@ -24,6 +24,9 @@ import { TimeSystem } from './simulation/TimeSystem'
 import { ScenarioPanel } from './simulation/ScenarioPanel'
 import { InvestingPanel } from './simulation/InvestingPanel'
 import { PhonePanel } from './simulation/PhonePanel'
+import { CharacterCreation } from './life/CharacterCreation'
+import { MissionTracker } from './life/MissionTracker'
+import { LifeLoop } from './life/LifeLoop'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -57,10 +60,12 @@ function CartPanel() {
 
   return (
     <div className="cart-panel">
-      <div className="cart-title">🛒 Cart</div>
+      <div className="cart-title">Your Cart</div>
       {[...grouped.values()].map((g) => (
         <div key={g.name} className="cart-row">
-          <span>{g.name} ×{g.qty}</span>
+          <span>
+            {g.name} ×{g.qty}
+          </span>
           <span>${(g.price * g.qty).toFixed(2)}</span>
         </div>
       ))}
@@ -86,6 +91,7 @@ export function Game() {
     [],
   )
 
+  const characterCreated = useGame((s) => s.characterCreated)
   const scene = useGame((s) => s.scene)
   const transitioning = useGame((s) => s.transitioning)
   const dialogue = useGame((s) => s.dialogue)
@@ -101,15 +107,15 @@ export function Game() {
   const [fade, setFade] = useState(false)
   const [locked, setLocked] = useState(false)
 
-  // init keyboard + initial spawn
   useEffect(() => {
     initControls()
-    useGame.setState({ spawn: CITY_START, scene: 'city' })
-    // Dev/review hook so browser automation shares the live (HMR-stable) store
     window.__useGame = useGame
+    const s = useGame.getState()
+    if (!s.characterCreated && !s.spawn) {
+      useGame.setState({ spawn: CITY_START, scene: 'city' })
+    }
   }, [])
 
-  // fade + finish transition on scene change
   useEffect(() => {
     setFade(true)
     const raf = requestAnimationFrame(() => setFade(false))
@@ -120,11 +126,22 @@ export function Game() {
     }
   }, [scene, finishTransition])
 
-  // track pointer lock for the hint
   useEffect(() => {
     const onChange = () => setLocked(!!document.pointerLockElement)
     document.addEventListener('pointerlockchange', onChange)
     return () => document.removeEventListener('pointerlockchange', onChange)
+  }, [])
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyP' && e.code !== 'KeyM') return
+      if (!useGame.getState().characterCreated) return
+      const s = useGame.getState()
+      if (s.phoneOpen) s.closePhone()
+      else s.openPhone()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   const modalOpen =
@@ -135,8 +152,9 @@ export function Game() {
     !!quizOpen ||
     !!scenarioOpen ||
     investingOpen ||
-    phoneOpen
-  const showHint = !locked && !modalOpen
+    phoneOpen ||
+    !characterCreated
+  const showHint = characterCreated && !locked && !modalOpen
 
   return (
     <RigContext.Provider value={rig}>
@@ -147,34 +165,42 @@ export function Game() {
           ) : (
             <>
               <color attach="background" args={['#0b0f16']} />
-              <hemisphereLight args={['#ffffff', '#444444', 0.5]} />
+              <hemisphereLight args={['#ffffff', '#444444', 0.55]} />
+              <directionalLight position={[4, 10, 2]} intensity={0.85} castShadow />
             </>
           )}
 
           <SceneContent />
-          <Player />
+          {characterCreated && <Player />}
           <ThirdPersonCamera />
           <PointerLook />
         </Canvas>
 
-        {/* Overlays */}
-        <GameHUD />
-        <CurriculumHUD />
-        <Minimap />
-        <InteractionPrompt />
-        <CartPanel />
-        <DialogueSystem />
-        <LessonPanel />
-        <QuizPanel />
-        <ScenarioPanel />
-        <InvestingPanel />
-        <PhonePanel />
-        <LifeEventSystem />
-        <TimeSystem />
+        {!characterCreated && <CharacterCreation />}
+        {characterCreated && (
+          <>
+            <GameHUD />
+            <CurriculumHUD />
+            <Minimap />
+            <MissionTracker />
+            <InteractionPrompt />
+            <CartPanel />
+            <DialogueSystem />
+            <LessonPanel />
+            <QuizPanel />
+            <ScenarioPanel />
+            <InvestingPanel />
+            <PhonePanel />
+            <LifeEventSystem />
+            <TimeSystem />
+            <LifeLoop />
+          </>
+        )}
 
         {showHint && (
           <div className="controls-hint">
-            <strong>Click</strong> or <strong>◀ ▶</strong> to look · <strong>WASD</strong> move · <strong>E</strong> interact · <strong>ESC</strong> release/close
+            <strong>Click</strong> look · <strong>WASD</strong> move · <strong>E</strong> interact ·{' '}
+            <strong>P</strong> phone · <strong>ESC</strong> release
           </div>
         )}
 

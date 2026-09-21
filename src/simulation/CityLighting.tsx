@@ -2,24 +2,29 @@ import { Sky } from '@react-three/drei'
 import { useGame } from '../GameState'
 import { lightingForMinuteOfDay, stampFromMinutes } from './time'
 
-/** City exterior lighting driven by the simulation clock (no geometry changes). */
+/** City exterior lighting driven by the simulation clock + season tint. */
 export function CityLighting() {
   const totalMinutes = useGame((s) => s.totalMinutes)
+  const season = useGame((s) => s.season)
   const { minuteOfDay } = stampFromMinutes(totalMinutes)
   const L = lightingForMinuteOfDay(minuteOfDay)
+
+  const seasonFog =
+    season === 'winter' ? '#c5d4e8' : season === 'fall' ? '#d4b896' : season === 'spring' ? '#b7d4c2' : L.fogColor
+  const hemiBoost = season === 'summer' ? 1.08 : season === 'winter' ? 0.88 : 1
 
   return (
     <>
       <Sky
         sunPosition={L.sunPosition}
-        turbidity={L.skyTurbidity}
+        turbidity={season === 'fall' ? L.skyTurbidity + 1.2 : L.skyTurbidity}
         rayleigh={L.skyRayleigh}
       />
-      <fog attach="fog" args={[L.fogColor, L.fogNear, L.fogFar]} />
-      <hemisphereLight args={[L.hemiSky, L.hemiGround, L.hemiIntensity]} />
+      <fog attach="fog" args={[seasonFog, L.fogNear, L.fogFar + (season === 'winter' ? 8 : 0)]} />
+      <hemisphereLight args={[L.hemiSky, L.hemiGround, L.hemiIntensity * hemiBoost]} />
       <directionalLight
         position={L.sunPosition}
-        intensity={L.sunIntensity}
+        intensity={L.sunIntensity * (season === 'winter' ? 0.85 : 1)}
         castShadow={L.phase !== 'night'}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}

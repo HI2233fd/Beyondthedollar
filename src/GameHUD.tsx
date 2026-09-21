@@ -31,6 +31,11 @@ export function GameHUD() {
   const dueBillIds = useGame((s) => s.dueBillIds)
   const recurringBills = useGame((s) => s.recurringBills)
   const debt = useGame((s) => s.debt)
+  const lifeLevel = useGame((s) => s.lifeLevel)
+  const xp = useGame((s) => s.xp)
+  const xpToNext = useGame((s) => s.xpToNext())
+  const playerName = useGame((s) => s.playerName)
+  const season = useGame((s) => s.season)
 
   const cal = stampFromMinutes(totalMinutes)
   const phase = dayPhase(cal.minuteOfDay)
@@ -47,6 +52,15 @@ export function GameHUD() {
   return (
     <>
       <div className="hud">
+        <div className="hud-item">
+          <span className="hud-label">{playerName || 'You'}</span>
+          <span className="hud-value">
+            Lv {lifeLevel}
+          </span>
+          <span className="hud-sub">
+            {xp}/{xpToNext} XP
+          </span>
+        </div>
         <div className="hud-item">
           <span className="hud-label">Cash</span>
           <span className="hud-value">{money(cash)}</span>
@@ -89,7 +103,7 @@ export function GameHUD() {
         </div>
         <div className="hud-item hud-time">
           <span className="hud-label">
-            {cal.weekday} · {phase}
+            {cal.weekday} · {phase} · {season}
           </span>
           <span className="hud-value">
             {cal.month}/{cal.dayOfMonth} {cal.clockLabel}

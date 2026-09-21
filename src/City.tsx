@@ -6,6 +6,7 @@ import { box } from './collision'
 import { setActiveBoxes } from './world'
 import { useGame } from './GameState'
 import { dayPhase, stampFromMinutes } from './simulation/time'
+import { DowntownDistrict } from './life/DowntownDistrict'
 
 const ROAD_HALF = 4.5
 const SIDEWALK_OUTER = 8
@@ -248,6 +249,8 @@ export function City() {
       <Pedestrian position={[-42, 0, -6.6]} range={12} speed={0.9} phase={1} shirt="#a855f7" />
       <Pedestrian position={[6.5, 0, -20]} range={14} speed={1.05} phase={3} shirt="#38bdf8" />
       <Pedestrian position={[-6.5, 0, 18]} range={12} speed={0.85} phase={5} shirt="#f472b6" pants="#1f2937" />
+
+      <DowntownDistrict />
     </group>
   )
 }
