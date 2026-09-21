@@ -1,11 +1,11 @@
-# Beyond The Dollar — 3D Prototype
+# Beyond The Dollar — 3D Life Simulator
 
 **Beyond The Dollar** is a nonprofit helping teenagers understand financial life in an
-engaging way. This repository contains a **playable third-person 3D web prototype**:
-a real, explorable city block (the city of *Merridian*) where you walk around, enter
-buildings, talk to NPCs, make choices, and see financial consequences.
+engaging way. This repository is a **playable third-person 3D open-world life simulator**:
+create a person, explore Merridian, build relationships, work, bank, shop, and see how
+choices shape *your* life.
 
-It is a true 3D world — not a dashboard, 2D game, or menu.
+It is a true 3D world — not a dashboard, quiz app, or menu simulator.
 
 ## Tech stack
 
@@ -28,27 +28,25 @@ npm run dev      # start the dev server at http://localhost:5173
 - **Click** the scene to capture the mouse (look around)
 - **WASD** — move · **Mouse** — rotate the third-person camera
 - **E** — interact (enter buildings, talk to NPCs, add groceries, checkout)
+- **P** — open / close your phone (life hub)
 - **ESC** — close a dialogue / release the mouse
+
+## Connected first loop
+
+1. **Character creation** — name, age, look, life goals
+2. **Starter bedroom** → explore home → leave → neighborhood
+3. **Meet NPCs** (relationships + memories) · **phone** missions
+4. **Personalized opportunity** from your goals
+5. **Bank → job interview → paycheck/taxes → grocery/savings**
+6. **XP / skills / level** · autosave · **visible locked Downtown (Lv 10)**
 
 ## What's in the prototype
 
-- **One polished city block** — roads, sidewalks, road markings, parked cars,
-  streetlights, trees, and NPC pedestrians.
-- **Five buildings with clear signs** — Home (Maple Apartments), FirstCity Bank,
-  Merridian College, FreshMart Grocery, and Summit Office. Bank, Grocery, College,
-  and Office are enterable (press **E** at the door; quick fade transition).
-- **Real 3D interiors** with furniture and staff NPCs (teller, counselor, manager,
-  cashier).
-- **Third-person humanoid** avatar that stands, walks, faces its movement direction,
-  and stops on release.
-- **Collision** so you can't walk through buildings/walls or leave the block.
-- **Reusable interaction + dialogue systems** (proximity prompt, bottom dialogue UI).
-- **Grocery shopping** — add items to a cart and pay at checkout (cash updates live).
-- **Workplace job** — apply to become an Office Assistant ($16/hr, 15 hrs/week).
-- **Bank & College** interactions (savings, deposits, credit info, majors, tuition,
-  scholarships).
-- **A life event** — after a short time a $700 car repair appears with three outcomes.
-- **Minimal HUD** (cash, bank, location) and a **minimap** (no teleporting).
+- Dense starter district with roads, sidewalks, cars, lights, trees, pedestrians
+- Enterable Home (bedroom + living), Bank, Grocery, College, Office
+- Phone life hub — missions, goals, people, jobs, bank, invest, skills, map, news, achievements
+- Simulation clock, seasons tint, bills, investing, car/home deals, curriculum stations
+- localStorage autosave after major actions
 
 ## Available scripts
 
@@ -65,22 +63,14 @@ npm run dev      # start the dev server at http://localhost:5173
 ```
 src/
 ├── Game.tsx              # Canvas, scene switching, overlays, lighting
-├── GameState.ts          # centralized zustand game state + actions
+├── GameState.ts          # zustand game + life progression + save
+├── life/                 # character creation, missions, XP, downtown, save
 ├── Player.tsx            # third-person humanoid + movement + interaction
 ├── ThirdPersonCamera.tsx # follow camera
-├── PointerLook.tsx       # pointer-lock mouse look
-├── City.tsx              # exterior block (ground, roads, props, buildings)
-├── cityLayout.ts         # building/door/collision definitions
-├── collision.ts          # AABB collision helpers
-├── InteractionSystem.tsx # reusable proximity interaction registry + prompt
-├── DialogueSystem.tsx    # reusable dialogue UI
-├── NPC.tsx / Humanoid.tsx / props.tsx
-├── GameHUD.tsx / Minimap.tsx / LifeEventSystem.tsx
-├── Buildings/Building.tsx
-└── Interiors/            # Bank, Grocery, College, Office (+ Room shell)
+├── City.tsx              # exterior block + locked Downtown skyline
+├── simulation/           # phone, time, investing, scenarios, bills
+├── curriculum/           # optional learning stations
+└── Interiors/            # Home, Bank, Grocery, College, Office
 ```
 
-## Initial player state
-
-Cash $500 · Bank $1,500 · Savings $1,000 · Weekly income $0 · Monthly expenses $300 ·
-Credit score 650 · Education: High School · Career: Student.
+Built for Beyond The Dollar — learn through living.
