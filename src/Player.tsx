@@ -96,17 +96,8 @@ export function Player() {
   })
 
   return (
-    <group ref={mergeRefs(rig.groupRef, localRef)} scale={body === 'slim' ? 0.95 : body === 'athletic' ? 1.05 : 1}>
-      <Humanoid
-        shirt={appearance.shirt}
-        pants={appearance.pants}
-        skin={appearance.skin}
-        hair={appearance.hair}
-        face={appearance.face}
-        walkRef={rig.walk}
-        movingRef={rig.moving}
-      />
-      {/* soft contact shadow */}
+    <group ref={mergeRefs(rig.groupRef, localRef)} scale={1}>
+      <Humanoid look={appearance} walkRef={rig.walk} movingRef={rig.moving} anim={rig.moving.current ? 'walk' : 'idle'} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.5, 16]} />
         <meshBasicMaterial color="#000000" transparent opacity={0.22} />

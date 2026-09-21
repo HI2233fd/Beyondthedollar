@@ -47,6 +47,10 @@ import {
 } from './life/types'
 import { ACHIEVEMENT_DEFS, createFirstDayMission, createPersonalizedOpportunity } from './life/missions'
 import { clearSave, emptyLifeDefaults, loadSave, writeSave, type SaveBlob } from './life/save'
+import { computeActivityOptions, type OptionContext } from './life/optionsEngine'
+import { buildGoalMilestones, syncGoalMilestonesFromState } from './life/goalChains'
+import { normalizeAppearance, type GoalMilestone, type PhoneMessage, type RewardPopup } from './life/characterLook'
+import type { ActivityOption } from './life/characterLook'
 
 export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
 
@@ -203,6 +207,13 @@ interface GameState {
   decisions: string[]
   season: Season
   firstDayStarted: boolean
+  optionsOpen: boolean
+  guideDismissed: string[]
+  phoneOpenedOnce: boolean
+  leftHome: boolean
+  rewardPopup: RewardPopup | null
+  messages: PhoneMessage[]
+  goalMilestones: GoalMilestone[]
 
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
@@ -225,6 +236,15 @@ interface GameState {
   rememberDecision: (id: string) => void
   syncSeasonFromTime: () => void
   downtownUnlocked: () => boolean
+  openOptions: () => void
+  closeOptions: () => void
+  activityOptions: () => ActivityOption[]
+  dismissGuide: (key: string) => void
+  showReward: (title: string, lines: string[], xp?: number, cash?: number) => void
+  clearRewardPopup: () => void
+  pushMessage: (from: string, body: string, opportunityId?: string) => void
+  markMessagesRead: () => void
+  syncMilestones: () => void
 
   openCheckingAccount: () => void
   deposit: (amount: number) => string | null
@@ -412,7 +432,7 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     characterCreated: true,
     playerName: blob.playerName,
     playerAge: blob.playerAge,
-    appearance: blob.appearance,
+    appearance: normalizeAppearance(blob.appearance),
     goals: blob.goals,
     lifeLevel: blob.lifeLevel,
     xp: blob.xp,
@@ -424,6 +444,13 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     decisions: blob.decisions,
     season: blob.season,
     firstDayStarted: true,
+    optionsOpen: false,
+    guideDismissed: [],
+    phoneOpenedOnce: true,
+    leftHome: true,
+    rewardPopup: null,
+    messages: [],
+    goalMilestones: buildGoalMilestones(blob.goals),
     cash: blob.cash,
     bank: blob.bank,
     savings: blob.savings,
@@ -557,7 +584,7 @@ function createGameStore(): UseGameStore {
   },
 
   enterScene: (scene, spawn) =>
-    set({
+    set((s) => ({
       transitioning: true,
       scene,
       spawn,
@@ -565,7 +592,9 @@ function createGameStore(): UseGameStore {
       prompt: null,
       investingPanelOpen: false,
       phoneOpen: false,
-    }),
+      optionsOpen: false,
+      leftHome: s.leftHome || scene === 'city',
+    })),
   finishTransition: () => set({ transitioning: false }),
 
   beginLife: (name, age, appearance, goals) => {
@@ -573,11 +602,12 @@ function createGameStore(): UseGameStore {
     const opportunity = createPersonalizedOpportunity(goals)
     const achievements: Record<string, number | null> = {}
     for (const a of ACHIEVEMENT_DEFS) achievements[a.id] = null
+    const look = normalizeAppearance(appearance)
     set({
       characterCreated: true,
       playerName: name,
       playerAge: age,
-      appearance: { ...appearance },
+      appearance: look,
       goals: [...goals],
       lifeLevel: 1,
       xp: 0,
@@ -589,6 +619,21 @@ function createGameStore(): UseGameStore {
       decisions: [],
       season: 'summer',
       firstDayStarted: true,
+      optionsOpen: false,
+      guideDismissed: [],
+      phoneOpenedOnce: false,
+      leftHome: false,
+      rewardPopup: null,
+      messages: [
+        {
+          id: 'msg-welcome',
+          from: 'Guide',
+          body: `Welcome to Merridian, ${name}. Open “What can I do?” whenever you want your next options.`,
+          atTotalMinutes: START_TOTAL_MINUTES,
+          read: false,
+        },
+      ],
+      goalMilestones: buildGoalMilestones(goals),
       scene: 'home',
       spawn: HOME_BEDROOM_START,
       transitioning: true,
@@ -597,6 +642,7 @@ function createGameStore(): UseGameStore {
       phoneOpen: false,
       lastBillNotice: `Welcome, ${name}. Your first day starts at home.`,
     })
+    get().showReward('LIFE BEGINS', [`${name} · age ${age}`, 'Explore home · meet people · build your path'], 0)
     get().autosave()
   },
   hasSaveGame: () => !!loadSave(),
@@ -637,8 +683,15 @@ function createGameStore(): UseGameStore {
           ? `+${amount} XP · ${reason}`
           : s.lastBillNotice,
     })
-    if (leveled && lifeLevel >= DOWNTOWN_UNLOCK_LEVEL) {
-      get().unlockAchievement('downtown-unlocked')
+    if (leveled) {
+      get().showReward('LEVEL UP', [
+        `Life Level ${lifeLevel}`,
+        lifeLevel >= DOWNTOWN_UNLOCK_LEVEL
+          ? 'Downtown unlocked — explore the east skyline'
+          : `Downtown unlocks at Life Level ${DOWNTOWN_UNLOCK_LEVEL}`,
+        reason ? `From: ${reason}` : '',
+      ].filter(Boolean), amount)
+      if (lifeLevel >= DOWNTOWN_UNLOCK_LEVEL) get().unlockAchievement('downtown-unlocked')
     }
     get().autosave()
   },
@@ -667,11 +720,92 @@ function createGameStore(): UseGameStore {
     }
     set({ relationships: { ...s.relationships, [npcId]: next } })
     get().completeMissionObjective('first-day', 'meet-someone')
-    if (talks === 1) get().awardXp(25, `Met ${displayName}`)
-    else if (talks % 3 === 0) {
+    if (talks === 1) {
+      get().awardXp(25, `Met ${displayName}`)
+      get().showReward('NEW CONNECTION', [`Met ${displayName}`, `Relationship · ${next.tier}`, '+25 XP'], 25)
+      get().pushMessage(displayName, `Hey ${s.playerName || 'there'} — good meeting you. Text me if you need a local tip.`)
+    } else if (talks % 3 === 0) {
       get().awardXp(15, `${displayName} · ${next.tier}`)
       get().bumpSkill('communication', 0.15)
     }
+    get().syncMilestones()
+  },
+  openOptions: () => set({ optionsOpen: true, phoneOpen: false, dialogue: null, prompt: null }),
+  closeOptions: () => set({ optionsOpen: false }),
+  activityOptions: () => {
+    const s = get()
+    const ctx: OptionContext = {
+      scene: s.scene,
+      hasChecking: s.hasCheckingAccount,
+      hasJob: s.hasJob,
+      cash: s.cash,
+      bank: s.bank,
+      savings: s.savings,
+      lifeLevel: s.lifeLevel,
+      xp: s.xp,
+      xpToNext: xpNeededForLevel(s.lifeLevel),
+      goals: s.goals,
+      missions: s.missions,
+      metJordan: !!s.relationships['home-jordan']?.met,
+      phoneOpen: s.phoneOpen,
+      discovered: s.discoveredLocations,
+      career: s.career,
+      season: s.season,
+      creditEstablished: s.creditEstablished,
+      paystubCount: s.paystubs.length,
+      unreadMessages: (s.messages ?? []).filter((m) => !m.read).length,
+    }
+    return computeActivityOptions(ctx)
+  },
+  dismissGuide: (key) => {
+    const s = get()
+    if (s.guideDismissed.includes(key)) return
+    set({ guideDismissed: [...s.guideDismissed, key] })
+  },
+  showReward: (title, lines, xp, cash) => {
+    set({
+      rewardPopup: {
+        id: `rw-${Date.now()}`,
+        title,
+        lines,
+        xp,
+        cash,
+        createdAt: Date.now(),
+      },
+    })
+  },
+  clearRewardPopup: () => set({ rewardPopup: null }),
+  pushMessage: (from, body, opportunityId) => {
+    const s = get()
+    const msg = {
+      id: `msg-${s.totalMinutes}-${s.messages.length}`,
+      from,
+      body,
+      atTotalMinutes: s.totalMinutes,
+      read: false,
+      opportunityId,
+    }
+    set({ messages: [msg, ...s.messages].slice(0, 40) })
+  },
+  markMessagesRead: () => {
+    set({ messages: get().messages.map((m) => ({ ...m, read: true })) })
+  },
+  syncMilestones: () => {
+    const s = get()
+    const holdingsValue = s.holdings.stock * s.assetPrices.stock + s.holdings.bond * s.assetPrices.bond
+    set({
+      goalMilestones: syncGoalMilestonesFromState({
+        goals: s.goals,
+        milestones: s.goalMilestones.length ? s.goalMilestones : buildGoalMilestones(s.goals),
+        hasJob: s.hasJob,
+        hasChecking: s.hasCheckingAccount,
+        savings: s.savings,
+        paystubCount: s.paystubs.length,
+        metAnyone: Object.values(s.relationships).some((r) => r.met),
+        discoveredCount: s.discoveredLocations.length,
+        holdingsValue,
+      }),
+    })
   },
   completeMissionObjective: (missionId, objectiveId) => {
     const s = get()
@@ -690,15 +824,24 @@ function createGameStore(): UseGameStore {
 
     if (after.rewardXp) get().awardXp(after.rewardXp, after.title)
     if (after.rewardCash) set({ cash: get().cash + after.rewardCash })
+    const lines = [
+      after.rewardCash ? `+$${after.rewardCash}` : '',
+      after.rewardXp ? `+${after.rewardXp} XP` : '',
+      missionId === 'first-day' ? 'Skill · Problem Solving +' : '',
+      missionId === 'first-opportunity' ? 'Skills · Financial + Business' : '',
+    ].filter(Boolean)
+    get().showReward('MISSION COMPLETE', [after.title, ...lines], after.rewardXp, after.rewardCash)
     if (missionId === 'first-day') {
       get().unlockAchievement('first-day-done')
       get().bumpSkill('problemSolving', 0.2)
       set({ lastBillNotice: 'First day complete — your personalized opportunity is waiting' })
+      get().pushMessage('Jordan', 'Nice work surviving day one. Summit is hiring if you want a paycheck path.')
     }
     if (missionId === 'first-opportunity') {
       get().bumpSkill('financial', 0.35)
       get().bumpSkill('business', 0.2)
     }
+    get().syncMilestones()
     get().autosave()
   },
   discoverLocation: (id) => {
@@ -865,6 +1008,9 @@ function createGameStore(): UseGameStore {
       get().bumpSkill('problemSolving', 0.2)
       get().completeMissionObjective('first-opportunity', 'get-hired')
       get().rememberDecision(`hired-summit-${score}`)
+      get().showReward('YOU’RE HIRED', ['Office Assistant', '+$240/wk gross before tax', '+80 XP', 'Skill · Communication'], 80)
+      get().pushMessage('Diane · Summit', 'Welcome aboard. Direct deposit hits weekly — check Phone → Jobs for payday.')
+      get().syncMilestones()
       get().autosave()
       return { hired: true, message }
     }
@@ -1416,8 +1562,9 @@ function createGameStore(): UseGameStore {
   dismissMarketNotice: () => set({ lastMarketNotice: null }),
 
   openPhone: () => {
-    set({ phoneOpen: true, dialogue: null, prompt: null, investingPanelOpen: false })
+    set({ phoneOpen: true, phoneOpenedOnce: true, dialogue: null, prompt: null, investingPanelOpen: false, optionsOpen: false })
     get().completeMissionObjective('first-day', 'open-phone')
+    get().markMessagesRead()
   },
   closePhone: () => set({ phoneOpen: false }),
 

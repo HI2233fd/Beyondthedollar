@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Building } from './Buildings/Building'
-import { Car, Streetlight, Tree, Pedestrian, Bench, Mailbox, Planter } from './props'
+import { Car, Streetlight, Tree, Pedestrian, Bench, Mailbox, Planter, TrafficCar } from './props'
 import { BUILDINGS, cityCollision, WORLD } from './cityLayout'
 import { box } from './collision'
 import { setActiveBoxes } from './world'
@@ -244,12 +244,34 @@ export function City() {
         <Planter key={`pl${i}`} position={[p.x, 0, p.z]} />
       ))}
 
-      <Pedestrian position={[-20, 0, 6.5]} range={14} speed={1.0} phase={0} shirt="#ef4444" />
-      <Pedestrian position={[14, 0, -6.6]} range={16} speed={0.8} phase={2} shirt="#22c55e" pants="#374151" />
-      <Pedestrian position={[36, 0, 6.4]} range={10} speed={1.2} phase={4} shirt="#eab308" pants="#3f3f46" skin="#8d5a3c" />
-      <Pedestrian position={[-42, 0, -6.6]} range={12} speed={0.9} phase={1} shirt="#a855f7" />
-      <Pedestrian position={[6.5, 0, -20]} range={14} speed={1.05} phase={3} shirt="#38bdf8" />
-      <Pedestrian position={[-6.5, 0, 18]} range={12} speed={0.85} phase={5} shirt="#f472b6" pants="#1f2937" />
+      <Pedestrian position={[-20, 0, 6.5]} range={14} speed={1.0} phase={0} shirt="#ef4444" skin="#d0996b" hair="#1a1a1a" />
+      <Pedestrian position={[14, 0, -6.6]} range={16} speed={0.8} phase={2} shirt="#22c55e" pants="#374151" skin="#c68642" />
+      <Pedestrian position={[36, 0, 6.4]} range={10} speed={1.2} phase={4} shirt="#eab308" pants="#3f3f46" skin="#8d5a3c" hair="#4a3728" />
+      <Pedestrian position={[-42, 0, -6.6]} range={12} speed={0.9} phase={1} shirt="#a855f7" skin="#e0ac69" />
+      <Pedestrian position={[6.5, 0, -20]} range={14} speed={1.05} phase={3} shirt="#38bdf8" axis="x" />
+      <Pedestrian position={[-6.5, 0, 18]} range={12} speed={0.85} phase={5} shirt="#f472b6" pants="#1f2937" skin="#5c3317" />
+      <Pedestrian position={[28, 0, 7.2]} range={9} speed={0.95} phase={1.5} shirt="#14b8a6" skin="#f1c27d" hair="#e8e0d5" />
+      <Pedestrian position={[-30, 0, -7.1]} range={11} speed={1.1} phase={2.7} shirt="#f97316" pants="#44403c" />
+      <Pedestrian position={[10, 0, 20]} range={8} speed={0.7} phase={0.4} shirt="#6366f1" axis="x" skin="#c9956b" />
+
+      <TrafficCar z={-2.0} speed={7} phase={0} color="#ef4444" />
+      <TrafficCar z={2.1} speed={5.5} phase={2.2} color="#3b82f6" />
+      <TrafficCar z={-2.0} speed={6.2} phase={4.5} color="#f8fafc" />
+      <TrafficCar z={2.1} speed={8} phase={1.1} color="#111827" />
+
+      {/* Ambient facade blocks for denser skyline (non-enterable) */}
+      {[
+        { x: -50, z: -28, w: 8, d: 7, h: 11, c: '#6b7280' },
+        { x: 42, z: -26, w: 9, d: 8, h: 14, c: '#4b5563' },
+        { x: -46, z: 28, w: 7, d: 6, h: 9, c: '#78716c' },
+        { x: 46, z: 26, w: 10, d: 8, h: 18, c: '#334155' },
+        { x: 0, z: -34, w: 12, d: 6, h: 8, c: '#a8a29e' },
+      ].map((b, i) => (
+        <mesh key={`facade-${i}`} position={[b.x, b.h / 2, b.z]} castShadow receiveShadow>
+          <boxGeometry args={[b.w, b.h, b.d]} />
+          <meshStandardMaterial color={b.c} roughness={0.75} metalness={0.08} />
+        </mesh>
+      ))}
 
       <DowntownDistrict />
       <DowntownTeaser />

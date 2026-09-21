@@ -228,6 +228,8 @@ export function Pedestrian({
   shirt = '#ef4444',
   pants = '#1f2937',
   skin = '#a9754f',
+  hair = '#2b2320',
+  axis = 'z',
 }: {
   position: [number, number, number]
   range?: number
@@ -236,6 +238,8 @@ export function Pedestrian({
   shirt?: string
   pants?: string
   skin?: string
+  hair?: string
+  axis?: 'x' | 'z'
 }) {
   const ref = useRef<Group>(null)
   const walk = useRef(phase)
@@ -248,15 +252,57 @@ export function Pedestrian({
     const g = ref.current
     if (!g) return
     const offset = Math.sin(t.current * speed * 0.35) * range
-    g.position.z = position[2] + offset
-    // face direction of travel
-    const dir = Math.cos(t.current * speed * 0.35)
-    g.rotation.y = dir >= 0 ? 0 : Math.PI
+    if (axis === 'x') {
+      g.position.x = position[0] + offset
+      const dir = Math.cos(t.current * speed * 0.35)
+      g.rotation.y = dir >= 0 ? Math.PI / 2 : -Math.PI / 2
+    } else {
+      g.position.z = position[2] + offset
+      const dir = Math.cos(t.current * speed * 0.35)
+      g.rotation.y = dir >= 0 ? 0 : Math.PI
+    }
   })
 
   return (
     <group ref={ref} position={position}>
-      <Humanoid shirt={shirt} pants={pants} skin={skin} walkRef={walk} movingRef={moving} />
+      <Humanoid shirt={shirt} pants={pants} skin={skin} hair={hair} walkRef={walk} movingRef={moving} anim="walk" />
+    </group>
+  )
+}
+
+/** Traffic car that loops along the east-west avenue. */
+export function TrafficCar({
+  z = -2.2,
+  speed = 6,
+  phase = 0,
+  color = '#64748b',
+  minX = -52,
+  maxX = 52,
+}: {
+  z?: number
+  speed?: number
+  phase?: number
+  color?: string
+  minX?: number
+  maxX?: number
+}) {
+  const ref = useRef<Group>(null)
+  const t = useRef(phase)
+
+  useFrame((_, delta) => {
+    t.current += delta
+    const g = ref.current
+    if (!g) return
+    const span = maxX - minX
+    const x = minX + ((t.current * speed + phase * 17) % span)
+    g.position.x = x
+    g.position.z = z
+    g.rotation.y = Math.PI / 2
+  })
+
+  return (
+    <group ref={ref}>
+      <Car position={[0, 0, 0]} rotation={0} color={color} />
     </group>
   )
 }

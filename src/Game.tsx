@@ -27,6 +27,9 @@ import { PhonePanel } from './simulation/PhonePanel'
 import { CharacterCreation } from './life/CharacterCreation'
 import { MissionTracker } from './life/MissionTracker'
 import { LifeLoop } from './life/LifeLoop'
+import { GuidePanel } from './life/GuidePanel'
+import { WhatCanIDoPanel, WhatCanIDoFab } from './life/WhatCanIDoPanel'
+import { RewardToast } from './life/RewardToast'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -102,6 +105,8 @@ export function Game() {
   const scenarioOpen = useGame((s) => s.activeScenarioId)
   const investingOpen = useGame((s) => s.investingPanelOpen)
   const phoneOpen = useGame((s) => s.phoneOpen)
+  const optionsOpen = useGame((s) => s.optionsOpen)
+  const rewardPopup = useGame((s) => s.rewardPopup)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -134,8 +139,14 @@ export function Game() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== 'KeyP' && e.code !== 'KeyM') return
       if (!useGame.getState().characterCreated) return
+      if (e.code === 'KeyO') {
+        const s = useGame.getState()
+        if (s.optionsOpen) s.closeOptions()
+        else s.openOptions()
+        return
+      }
+      if (e.code !== 'KeyP' && e.code !== 'KeyM') return
       const s = useGame.getState()
       if (s.phoneOpen) s.closePhone()
       else s.openPhone()
@@ -153,6 +164,8 @@ export function Game() {
     !!scenarioOpen ||
     investingOpen ||
     phoneOpen ||
+    optionsOpen ||
+    !!rewardPopup ||
     !characterCreated
   const showHint = characterCreated && !locked && !modalOpen
 
@@ -183,6 +196,10 @@ export function Game() {
             <CurriculumHUD />
             <Minimap />
             <MissionTracker />
+            <GuidePanel />
+            <WhatCanIDoFab />
+            <WhatCanIDoPanel />
+            <RewardToast />
             <InteractionPrompt />
             <CartPanel />
             <DialogueSystem />
@@ -200,7 +217,7 @@ export function Game() {
         {showHint && (
           <div className="controls-hint">
             <strong>Click</strong> look · <strong>WASD</strong> move · <strong>E</strong> interact ·{' '}
-            <strong>P</strong> phone · <strong>ESC</strong> release
+            <strong>O</strong> options · <strong>P</strong> phone · <strong>ESC</strong> release
           </div>
         )}
 

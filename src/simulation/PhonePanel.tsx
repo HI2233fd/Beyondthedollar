@@ -23,6 +23,7 @@ function fmtWhen(totalMinutes: number) {
 
 type AppId =
   | 'home'
+  | 'messages'
   | 'missions'
   | 'goals'
   | 'people'
@@ -36,6 +37,7 @@ type AppId =
 
 const APPS: { id: AppId; label: string; icon: string }[] = [
   { id: 'home', label: 'Home', icon: '🏠' },
+  { id: 'messages', label: 'Messages', icon: '💬' },
   { id: 'missions', label: 'Missions', icon: '🎯' },
   { id: 'goals', label: 'Goals', icon: '⭐' },
   { id: 'people', label: 'People', icon: '👥' },
@@ -89,6 +91,8 @@ export function PhonePanel() {
   const season = useGame((s) => s.season)
   const marketNotice = useGame((s) => s.lastMarketNotice)
   const autosave = useGame((s) => s.autosave)
+  const messages = useGame((s) => s.messages)
+  const milestones = useGame((s) => s.goalMilestones)
 
   const [app, setApp] = useState<AppId>('home')
 
@@ -214,6 +218,25 @@ export function PhonePanel() {
           </div>
         )}
 
+        {app === 'messages' && (
+          <div className="phone-body">
+            {messages.length === 0 ? (
+              <p className="phone-muted">No messages yet — people and employers will text you.</p>
+            ) : (
+              <div className="phone-list">
+                {messages.slice(0, 12).map((m) => (
+                  <div key={m.id} className={`phone-row phone-people-row ${m.read ? '' : 'ok'}`}>
+                    <span>
+                      <strong>{m.from}</strong>
+                      <div className="phone-muted">{m.body}</div>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {app === 'missions' && (
           <div className="phone-body">
             {missions.map((m) => (
@@ -250,6 +273,16 @@ export function PhonePanel() {
                   </div>
                 )
               })}
+            </div>
+            <h3 className="phone-section">Milestones</h3>
+            <div className="phone-list">
+              {milestones.slice(0, 12).map((m) => (
+                <div key={m.id} className={`phone-row ${m.done ? 'ok' : ''}`}>
+                  <span>
+                    {m.done ? '✓' : '○'} {m.label}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         )}

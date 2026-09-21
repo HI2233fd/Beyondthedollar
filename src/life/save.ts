@@ -77,6 +77,13 @@ export function emptyLifeDefaults() {
     decisions: [] as string[],
     season: 'summer' as Season,
     firstDayStarted: false,
+    optionsOpen: false,
+    guideDismissed: [] as string[],
+    phoneOpenedOnce: false,
+    leftHome: false,
+    rewardPopup: null as import('./characterLook').RewardPopup | null,
+    messages: [] as { id: string; from: string; body: string; atTotalMinutes: number; read: boolean; opportunityId?: string }[],
+    goalMilestones: [] as { id: string; goalId: LifeGoalId; label: string; done: boolean }[],
   }
 }
 

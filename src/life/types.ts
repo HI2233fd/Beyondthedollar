@@ -22,10 +22,16 @@ export interface LifeGoalDef {
 export interface CharacterAppearance {
   skin: string
   hair: string
+  hairStyle?: 'short' | 'medium' | 'long' | 'bun' | 'fade'
   shirt: string
   pants: string
-  face: 'soft' | 'angular' | 'round'
-  body: 'slim' | 'average' | 'athletic'
+  shoes?: string
+  jacket?: string | null
+  face: 'soft' | 'angular' | 'round' | 'oval'
+  eyeColor?: string
+  brow?: 'soft' | 'strong' | 'arched'
+  body: 'slim' | 'average' | 'athletic' | 'plus'
+  accessory?: 'none' | 'glasses' | 'hat' | 'earrings'
 }
 
 export type SkillId =
@@ -100,10 +106,16 @@ export const LIFE_GOALS: LifeGoalDef[] = [
 export const DEFAULT_APPEARANCE: CharacterAppearance = {
   skin: '#d0996b',
   hair: '#241a12',
+  hairStyle: 'short',
   shirt: '#2563eb',
   pants: '#1f2937',
+  shoes: '#111827',
+  jacket: null,
   face: 'soft',
+  eyeColor: '#2c1810',
+  brow: 'soft',
   body: 'average',
+  accessory: 'none',
 }
 
 export const DEFAULT_SKILLS: Skills = {
