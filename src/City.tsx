@@ -7,6 +7,7 @@ import { setActiveBoxes } from './world'
 import { useGame } from './GameState'
 import { dayPhase, stampFromMinutes } from './simulation/time'
 import { DowntownDistrict } from './life/DowntownDistrict'
+import { DowntownTeaser } from './life/DowntownTeaser'
 
 const ROAD_HALF = 4.5
 const SIDEWALK_OUTER = 8
@@ -251,6 +252,7 @@ export function City() {
       <Pedestrian position={[-6.5, 0, 18]} range={12} speed={0.85} phase={5} shirt="#f472b6" pants="#1f2937" />
 
       <DowntownDistrict />
+      <DowntownTeaser />
     </group>
   )
 }
