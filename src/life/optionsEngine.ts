@@ -45,7 +45,26 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
   }
 
   if (activeOpp) {
-    const next = activeOpp.objectives.find((o) => !o.done)
+    // Prefer the first objective that still matches live state (handles sync lag).
+    const next =
+      activeOpp.objectives.find((o) => {
+        if (o.done) return false
+        if (o.id === 'open-checking' && ctx.hasChecking) return false
+        if (o.id === 'get-hired' && ctx.hasJob) return false
+        if (o.id === 'first-paycheck' && ctx.paystubCount > 0) return false
+        return true
+      }) ?? activeOpp.objectives.find((o) => !o.done)
+
+    const action: ActivityOption['action'] = !ctx.hasChecking
+      ? 'goto-bank'
+      : !ctx.hasJob
+        ? 'goto-office'
+        : ctx.paystubCount === 0
+          ? 'advance-payday'
+          : next?.id === 'shop-or-save'
+            ? 'goto-grocery'
+            : 'goto-grocery'
+
     options.push({
       id: `opp-${activeOpp.id}`,
       category: 'career',
@@ -54,13 +73,7 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
       locationHint: activeOpp.locationHint,
       personHint: activeOpp.personHint,
       priority: 90,
-      action: !ctx.hasChecking
-        ? 'goto-bank'
-        : !ctx.hasJob
-          ? 'goto-office'
-          : ctx.paystubCount === 0
-            ? 'advance-payday'
-            : 'goto-grocery',
+      action,
     })
   }
 
@@ -100,15 +113,26 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
 
   if (ctx.hasJob) {
     if (ctx.paystubCount === 0) {
-      options.push({
-        id: 'career-collect-payday',
-        category: 'career',
-        title: 'Collect your first payday (Sept 2)',
-        reason: 'Skip ahead to morning of Sept 2 and get ~$300 take-home deposited.',
-        locationHint: 'Phone / time skip',
-        priority: 92,
-        action: 'advance-payday',
-      })
+      const alreadyPayday = options.some((o) => o.action === 'advance-payday')
+      if (!alreadyPayday) {
+        options.push({
+          id: 'career-collect-payday',
+          category: 'career',
+          title: 'Collect your first payday (Sept 2)',
+          reason: 'Skip ahead to morning of Sept 2 and get ~$300 take-home deposited.',
+          locationHint: 'Phone / time skip',
+          priority: 92,
+          action: 'advance-payday',
+        })
+      } else {
+        // Boost the opportunity payday option copy so Sept 2 / ~$300 is obvious
+        const pay = options.find((o) => o.action === 'advance-payday')
+        if (pay) {
+          pay.title = 'Collect your first payday (Sept 2)'
+          pay.reason = 'Skip ahead to morning of Sept 2 — ~$300 take-home hits checking.'
+          pay.priority = Math.max(pay.priority, 92)
+        }
+      }
     } else {
       options.push({
         id: 'career-performance',
