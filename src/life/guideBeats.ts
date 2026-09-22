@@ -1,54 +1,65 @@
 import type { GuideBeat, GuideContext } from './characterLook'
 
+/** Directive beats — each push one concrete next action (paced, not roam). */
 export const GUIDE_BEATS: GuideBeat[] = [
   {
     id: 'wake',
-    title: 'Welcome to your life',
-    text: 'This is your home. Look around, then head outside when you’re ready. I’ll only jump in when it helps.',
+    title: 'Step 1 — Look around',
+    text: 'You’re home. Take a quick look, then hit Go on your mission tracker to head outside.',
     dismissKey: 'wake',
     when: (c) => c.scene === 'home' && !c.guideDismissed.includes('wake'),
   },
   {
     id: 'leave',
-    title: 'The city is waiting',
-    text: 'Find the glowing EXIT mat and press E. Your neighborhood has a bank, grocery, college, and jobs.',
+    title: 'Step 2 — Exit to the city',
+    text: 'Find the glowing EXIT mat and press E. Next stop: meet Jordan or open your phone.',
     dismissKey: 'leave',
     when: (c) => c.scene === 'home' && !c.leftHome && c.guideDismissed.includes('wake') && !c.guideDismissed.includes('leave'),
   },
   {
     id: 'phone',
-    title: 'Your Life Hub',
-    text: 'Press P or tap Phone anytime. It answers: what can I do, where do I go, who do I know, how is my life?',
+    title: 'Step 3 — Open your Life Hub',
+    text: 'Press P (or tap Phone). This is mission control — jobs, money, and “What can I do?”',
     dismissKey: 'phone',
     when: (c) => !c.phoneOpenedOnce && c.leftHome && !c.guideDismissed.includes('phone'),
   },
   {
     id: 'meet',
-    title: 'People open doors',
-    text: 'Talk to Jordan at home — acquaintances become friends, and friends create opportunities.',
+    title: 'Step 4 — Meet Jordan',
+    text: 'Talk to Jordan at home. People unlock opportunities — tap Go if you need a warp.',
     dismissKey: 'meet',
     when: (c) => !c.metAnyone && c.phoneOpenedOnce && !c.guideDismissed.includes('meet'),
   },
   {
     id: 'bank',
-    title: 'Money needs a home',
-    text: 'Open checking at FirstCity Bank before employers will hire you. Saving is a choice you make in the world.',
+    title: 'Step 5 — Open checking',
+    text: 'Walk into FirstCity Bank (or tap Go). No checking account = no direct deposit job.',
     dismissKey: 'bank',
     when: (c) => !c.hasChecking && c.metAnyone && !c.guideDismissed.includes('bank'),
   },
   {
     id: 'job',
-    title: 'Earn your first paycheck',
-    text: 'Interview with Diane at Summit Tower. Performance, skills, and relationships all grow from real work.',
+    title: 'Step 6 — Get hired',
+    text: 'Interview with Diane at Summit Tower. Nail it and your first ~$300 take-home lands Sept 2.',
     dismissKey: 'job',
     when: (c) => c.hasChecking && !c.hasJob && !c.guideDismissed.includes('job'),
   },
   {
+    id: 'payday',
+    title: 'Step 7 — Collect payday',
+    text: 'First deposit hits Sept 2 morning (~$300 after tax). Tap Go / “Collect payday” to skip ahead.',
+    dismissKey: 'payday',
+    when: (c) => c.hasJob && c.paystubCount === 0 && !c.guideDismissed.includes('payday'),
+  },
+  {
     id: 'next',
-    title: 'You choose what comes next',
-    text: 'Open “What can I do?” anytime. Several good paths will always be waiting — pick what YOUR life wants.',
+    title: 'Keep the streak',
+    text: 'Save a slice, grocery run, or bank lesson on credit. The coach always shows your next move.',
     dismissKey: 'next',
-    when: (c) => c.hasJob && !c.guideDismissed.includes('next'),
+    when: (c) =>
+      c.hasJob &&
+      (c.paystubCount > 0 || c.guideDismissed.includes('payday')) &&
+      !c.guideDismissed.includes('next'),
   },
 ]
 

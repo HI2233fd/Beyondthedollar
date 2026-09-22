@@ -39,7 +39,7 @@ export function LifeLoop() {
         // slight delay so player actually moves around bedroom
         const t = window.setTimeout(() => {
           useGame.getState().completeMissionObjective('first-day', 'explore-home')
-        }, 4000)
+        }, 1800)
         return () => clearTimeout(t)
       }
     }
@@ -49,7 +49,7 @@ export function LifeLoop() {
         exploredCity.current = true
         const t = window.setTimeout(() => {
           useGame.getState().completeMissionObjective('first-day', 'explore-neighborhood')
-        }, 6000)
+        }, 2500)
         return () => clearTimeout(t)
       }
     }

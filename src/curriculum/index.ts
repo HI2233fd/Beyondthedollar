@@ -82,4 +82,5 @@ export function unlockedAfterCompleting(
   return unlocked
 }
 
-export type { BuildingId, Lesson, Topic, Unit, Quiz, QuizQuestion } from './types'
+export type { BuildingId, Lesson, LessonBeat, LessonChoice, Topic, Unit, Quiz, QuizQuestion } from './types'
+export { resolveLessonBeats } from './interactiveBeats'

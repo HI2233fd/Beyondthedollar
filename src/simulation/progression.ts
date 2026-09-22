@@ -18,3 +18,16 @@ export const CREDIT_SCORE_ON_FILE = 560
 /** Home gates (also in GameState exports for deals). */
 export const HOME_CREDIT_MIN = 640
 export const HOME_DOWN_PAYMENT = 15000
+
+/** Summit Office Assistant — geared for ~$300 take-home after 18% tax. */
+export const OFFICE_HOURLY = 20
+export const OFFICE_HOURS_PER_WEEK = 18.5
+/** Gross weekly before tax (~$370). Net ≈ $303 after 18% withholding. */
+export const OFFICE_WEEKLY_GROSS = Math.round(OFFICE_HOURLY * OFFICE_HOURS_PER_WEEK)
+export const PAYROLL_TAX_RATE = 0.18
+
+/**
+ * First payday lands morning of Sept 2 (day index 1 @ 09:00).
+ * Calendar epoch is Sept 1 — so new hires on day one get paid the next morning.
+ */
+export const FIRST_PAYDAY_TOTAL_MINUTES = 1 * 24 * 60 + 9 * 60

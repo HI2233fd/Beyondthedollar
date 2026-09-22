@@ -13,8 +13,10 @@ export function GuidePanel() {
   const missions = useGame((s) => s.missions)
   const guideDismissed = useGame((s) => s.guideDismissed)
   const lifeLevel = useGame((s) => s.lifeLevel)
+  const paystubs = useGame((s) => s.paystubs)
   const dismissGuide = useGame((s) => s.dismissGuide)
   const openOptions = useGame((s) => s.openOptions)
+  const goDo = useGame((s) => s.goDo)
 
   if (!characterCreated) return null
 
@@ -28,10 +30,30 @@ export function GuidePanel() {
     firstDayDone: !!missions.find((m) => m.id === 'first-day')?.completed,
     guideDismissed,
     lifeLevel,
+    paystubCount: paystubs.length,
   }
 
   const beat = activeGuideBeat(ctx)
   if (!beat) return null
+
+  const primaryAction = (() => {
+    switch (beat.id) {
+      case 'leave':
+        return 'goto-city' as const
+      case 'phone':
+        return 'phone' as const
+      case 'meet':
+        return 'talk-jordan' as const
+      case 'bank':
+        return 'goto-bank' as const
+      case 'job':
+        return 'goto-office' as const
+      case 'payday':
+        return 'advance-payday' as const
+      default:
+        return null
+    }
+  })()
 
   return (
     <div className="guide-card">
@@ -43,7 +65,19 @@ export function GuidePanel() {
         <strong>{beat.title}</strong>
         <p>{beat.text}</p>
         <div className="guide-actions">
-          <button type="button" className="btn-primary guide-btn" onClick={() => dismissGuide(beat.dismissKey)}>
+          {primaryAction && (
+            <button
+              type="button"
+              className="btn-primary guide-btn"
+              onClick={() => {
+                dismissGuide(beat.dismissKey)
+                goDo(primaryAction)
+              }}
+            >
+              Go
+            </button>
+          )}
+          <button type="button" className="btn-ghost guide-btn" onClick={() => dismissGuide(beat.dismissKey)}>
             Got it
           </button>
           <button
@@ -54,7 +88,7 @@ export function GuidePanel() {
               openOptions()
             }}
           >
-            Show my options
+            Options
           </button>
         </div>
       </div>

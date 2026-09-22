@@ -60,6 +60,9 @@ export function WhatCanIDoPanel() {
           })
         }, 400)
         break
+      case 'advance-payday':
+        useGame.getState().advanceToPayday()
+        break
       case 'open-map':
         openPhone()
         break

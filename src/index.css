@@ -1243,7 +1243,7 @@ canvas {
   border-radius: 14px;
   padding: 12px 14px;
   backdrop-filter: blur(12px);
-  pointer-events: none;
+  pointer-events: auto;
 }
 .mission-tracker-top {
   display: flex;
@@ -1318,6 +1318,191 @@ canvas {
   font-size: 0.7rem;
   color: #fbbf24;
   font-weight: 600;
+}
+.mission-go-btn {
+  margin-top: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, #34d399, #38bdf8);
+  color: #05221a;
+}
+.mission-go-btn:hover {
+  filter: brightness(1.06);
+}
+
+/* ---------- Pace coach ---------- */
+.pace-coach {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  z-index: 14;
+  width: min(420px, 92vw);
+  background: rgba(8, 14, 24, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 16px;
+  padding: 12px 14px 14px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.pace-coach-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 800;
+  color: #38bdf8;
+  margin-bottom: 4px;
+}
+.pace-coach-title {
+  display: block;
+  font-size: 1.02rem;
+  margin-bottom: 4px;
+}
+.pace-coach-reason {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.pace-coach-actions {
+  display: flex;
+  gap: 8px;
+}
+.pace-go {
+  flex: 1;
+  border: none;
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  background: linear-gradient(135deg, #34d399, #2dd4bf);
+  color: #05221a;
+}
+.pace-more {
+  border-radius: 11px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+/* ---------- Interactive lessons ---------- */
+.lesson-interactive .curriculum-meta {
+  flex-wrap: wrap;
+}
+.lesson-step-pill {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #a5f3fc;
+  background: rgba(34, 211, 238, 0.12);
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+.lesson-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin: 0 0 14px;
+}
+.lesson-progress-bar > div {
+  height: 100%;
+  background: linear-gradient(90deg, #34d399, #38bdf8);
+  transition: width 0.25s ease;
+}
+.lesson-beat {
+  min-height: 180px;
+}
+.lesson-beat-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #fde68a;
+  margin-bottom: 8px;
+}
+.lesson-beat-prompt {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+.lesson-beat-detail {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.lesson-beat-detail p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.lesson-beat-detail p:last-child {
+  margin-bottom: 0;
+}
+.lesson-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lesson-choice-btn {
+  text-align: left;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: var(--text);
+  line-height: 1.35;
+}
+.lesson-choice-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+}
+.lesson-reaction {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line);
+}
+.lesson-reaction.strong {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.lesson-reaction strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6ee7b7;
+}
+.lesson-reaction p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.lesson-finale-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 /* ---------- Phone life hub apps ---------- */
@@ -1572,4 +1757,16 @@ canvas {
   .create-look-3d { grid-template-columns: 1fr; }
   .guide-card { left: 12px; right: 12px; width: auto; bottom: 120px; }
   .options-fab { left: 12px; bottom: 72px; }
+  .pace-coach {
+    bottom: auto;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    transform: none;
+    bottom: 160px;
+  }
+  .mission-tracker {
+    bottom: 280px;
+  }
 }

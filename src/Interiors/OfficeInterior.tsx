@@ -5,8 +5,15 @@ import { box } from '../collision'
 import { useGame, type Dialogue, type DialogueOption } from '../GameState'
 import { LearningStation } from '../curriculum/LearningStation'
 import { stampFromMinutes } from '../simulation/time'
+import {
+  OFFICE_HOURS_PER_WEEK,
+  OFFICE_HOURLY,
+  OFFICE_WEEKLY_GROSS,
+  PAYROLL_TAX_RATE,
+} from '../simulation/progression'
 
 const NAME = 'Manager — Diane'
+const NET_EST = Math.round(OFFICE_WEEKLY_GROSS * (1 - PAYROLL_TAX_RATE))
 
 function stampLabel(totalMinutes: number) {
   const s = stampFromMinutes(totalMinutes)
@@ -15,7 +22,6 @@ function stampLabel(totalMinutes: number) {
 
 function showResult() {
   const result = useGame.getState().finishInterview()
-  // Single write for dialogue + hire flags so Phone/HUD never lag behind Diane’s message.
   useGame.setState((s) => ({
     dialogue: {
       name: NAME,
@@ -26,7 +32,7 @@ function showResult() {
       ? {
           hasJob: true,
           career: 'Office Assistant' as const,
-          weeklyIncome: Math.max(s.weeklyIncome, 16 * 15),
+          weeklyIncome: Math.max(s.weeklyIncome, OFFICE_WEEKLY_GROSS),
         }
       : {}),
   }))
@@ -128,11 +134,21 @@ function officeDialogue(): Dialogue {
 
   if (g.hasJob) {
     const weekly = Math.round(g.weeklyIncome * g.incomeFactor)
+    const net = Math.round(weekly * (1 - PAYROLL_TAX_RATE))
     const pay = stampLabel(g.nextPaydayAt)
     return {
       name: NAME,
-      text: `You’re on the roster as ${g.career}. Expected gross ~$${weekly}/week before tax. Next direct deposit lands around ${pay}. Paystubs live on your Phone → Bills / Pay.`,
-      options: [leave],
+      text: `You’re on the roster as ${g.career}. ~$${weekly}/wk gross → ~$${net} take-home after tax. Next direct deposit: ${pay}.`,
+      options: [
+        {
+          label: 'Skip ahead to payday',
+          action: () => {
+            useGame.getState().advanceToPayday()
+            useGame.getState().closeDialogue()
+          },
+        },
+        leave,
+      ],
     }
   }
 
@@ -166,7 +182,7 @@ function officeDialogue(): Dialogue {
       label: 'Ask about pay',
       next: {
         name: NAME,
-        text: '$16/hour, ~15 hours/week (~$240 gross). Direct deposit only. Paystubs appear on your phone after payday.',
+        text: `$${OFFICE_HOURLY}/hour, ~${OFFICE_HOURS_PER_WEEK} hours/week (~$${OFFICE_WEEKLY_GROSS} gross / ~$${NET_EST} take-home after ~18% tax). First payday is Sept 2 morning. Direct deposit only.`,
         options: [{ label: 'Back', next: menu }, leave],
       },
     },

@@ -30,6 +30,7 @@ import { LifeLoop } from './life/LifeLoop'
 import { GuidePanel } from './life/GuidePanel'
 import { WhatCanIDoPanel, WhatCanIDoFab } from './life/WhatCanIDoPanel'
 import { RewardToast } from './life/RewardToast'
+import { PaceCoach } from './life/PaceCoach'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -196,6 +197,7 @@ export function Game() {
             <CurriculumHUD />
             <Minimap />
             <MissionTracker />
+            <PaceCoach />
             <GuidePanel />
             <WhatCanIDoFab />
             <WhatCanIDoPanel />

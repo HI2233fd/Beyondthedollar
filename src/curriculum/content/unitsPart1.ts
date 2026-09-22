@@ -680,17 +680,15 @@ If your first job income varies with hours or tips, save a higher share in stron
           title: 'Borrowing Without Blind Spots',
           body: `Credit is an agreement to receive money, goods, or services now and pay later. A loan is a lump sum you repay on a schedule. A credit card is a revolving line of credit: you can borrow up to a credit limit, repay, and borrow again. When you get a first credit card, you are not getting free money—you are getting a flexible loan that becomes expensive if you carry a balance.
 
-Interest on debt is the cost of borrowing. Card issuers often quote an annual percentage rate, or APR, which expresses yearly interest cost. If you pay the full statement balance by the due date, many cards charge no interest on new purchases for that cycle. If you pay only the minimum, interest can pile up on the remaining balance, and a small purchase can cost far more over time.
+How do you build credit from scratch? Start with a product designed for thin files: a secured card (you place a deposit that becomes your limit), a student card, or authorized-user status on a trusted family member’s account that reports to the bureaus. Then run a simple loop: charge a small planned purchase, pay the statement in full before the due date, repeat. Autopay the full balance so you never miss. That boring rhythm is how scores climb.
 
-Secured credit is backed by collateral—an asset the lender can claim if you do not pay, such as a car for an auto loan. Unsecured credit, including most credit cards, has no collateral; lenders rely more on your promise and credit history, so rates may be higher. A cosigner promises to repay if you do not; that helps some first-time borrowers but puts the cosigner’s finances at risk.
+Interest on debt is the cost of borrowing. Card issuers often quote an annual percentage rate, or APR. If you pay the full statement balance by the due date, many cards charge no interest on new purchases for that cycle. If you pay only the minimum, interest piles up. Keep utilization—balance divided by limit—ideally under about 30%. One well-managed card beats three maxed cards.
 
-Fees matter too: annual fees, late fees, and cash-advance fees can add cost beyond interest. Always read the Schumer box—the summary table of rates and fees on card offers—before you apply. Borrowing for a depreciating want, like a weekend trip you cannot repay soon, is riskier than borrowing for a carefully planned need with a payoff path.
+Secured credit is backed by collateral; unsecured credit relies on your promise and history. Read the Schumer box for APR, annual fees, and late fees before you apply. Skip borrowing for a weekend trip you cannot repay soon. Write the monthly payment you can afford after rent, food, and transit. Credit times purchases—it is not a raise.
 
-Healthy habits include charging only what you can repay quickly, setting calendar reminders for due dates, and keeping utilization—how much of your limit you use—moderate. Credit can help you build a rental history bridge toward a first apartment when used responsibly, but missed payments can haunt applications and budgets for years.
-
-Before you borrow, write the monthly payment you can truly afford after rent, food, and transit. If the number only works if nothing goes wrong, the loan is too big. Credit is a tool for timing purchases—not a raise. Using it that way protects your future self from paying yesterday’s fun twice.`,
+Healthy habits: charge only what you can repay quickly, calendar every due date, and space out new applications so hard inquiries stay intentional. Used this way, credit becomes a bridge toward apartments and fair loan rates instead of a trap.`,
           whyItMatters:
-            'Understanding APR, balances, and fees turns a first credit card from a trap into a controlled tool.',
+            'Build credit with small on-time full payoffs — that habit unlocks apartments and cheaper borrowing later.',
           quiz: quiz('unit-09-q1', 'Credit and Borrowing Check', [
             q(
               'unit-09-q1-a',
@@ -761,19 +759,15 @@ Before you borrow, write the monthly payment you can truly afford after rent, fo
         lesson: {
           id: 'unit-10-l1',
           title: 'What Lenders Look Up About You',
-          body: `A credit report is a detailed record of your credit history compiled by credit bureaus—companies that gather information from lenders and public records. It typically lists accounts, credit limits, balances, payment history, and inquiries when someone checks your credit. A credit score is a three-digit summary model that translates report data into a number lenders use to estimate risk. Higher scores generally mean lower predicted risk of missed payments.
+          body: `A credit report is your financial reputation on paper—accounts, limits, balances, payment history, and inquiries gathered by credit bureaus. A credit score compresses that into a three-digit risk estimate. Higher usually means cheaper credit and easier approvals for cards, cars, and often apartments.
 
-Common score factors include payment history (whether you pay on time), amounts owed and credit utilization, length of credit history, mix of account types, and recent new credit. Payment history usually weighs heavily: a late payment on a first credit card can hurt more than you expect. Opening many new accounts at once can also look risky.
+What moves the score? Payment history first (on-time is king), then amounts owed and utilization, length of history, mix of accounts, and recent new credit. One late payment on a first card can sting for years. Opening many accounts at once looks risky.
 
-Landlords evaluating a first apartment, auto lenders, and card issuers may review reports or scores. Employers in some roles may use related checks under legal rules. That is why accuracy matters. You have the right to review your reports and dispute errors—wrong accounts or payments marked late incorrectly. Regular check-ins help you catch identity theft early, such as an account you never opened.
+How to build credit when you have little history: (1) secured card, student card, credit-builder loan, or careful authorized-user status; (2) autopay every due date; (3) keep utilization low—pay before the statement cuts if needed; (4) keep old fee-free accounts open so history length grows; (5) apply sparingly; (6) review your own reports a few times a year (soft checks don’t hurt) and dispute errors; (7) freeze credit when you are not applying so nobody opens accounts in your name.
 
-A hard inquiry occurs when you apply for new credit and a lender checks your report; several hard inquiries in a short period can nudge scores down temporarily. A soft inquiry—like checking your own score—typically does not hurt. Building credit as a teen or young adult can start with a responsible card, becoming an authorized user under careful family rules, or small installment loans paid on time—always with a plan to repay.
-
-Credit scores are not character judgments; they are risk tools. You can improve them with time and consistent on-time payments, keeping balances manageable, and avoiding unnecessary applications. Protecting your report is part of protecting your future rent approvals and loan rates.
-
-Set a recurring reminder to review your reports a few times a year, especially before applying for a card, auto loan, or apartment. Freeze or lock your credit if your bureau offers that option and you are not actively applying—it adds a barrier against new accounts opened in your name. Good credit is built slowly and damaged quickly; treat on-time payment like a non-negotiable bill to yourself.`,
+Hard inquiries happen when you apply; soft inquiries (checking yourself) usually do not hurt. After 6–12 clean months you may graduate a secured card or request a higher limit. Scores are risk tools, not character grades—they climb with boring excellence, not hacks. Good credit is built slowly and damaged quickly; treat on-time payment like a bill to yourself.`,
           whyItMatters:
-            'On-time payments and clean reports make first apartments and fair loan offers far more reachable.',
+            'On-time payments, low utilization, and clean reports are how you build credit landlords and lenders trust.',
           quiz: quiz('unit-10-q1', 'Credit Scores and Reports Check', [
             q(
               'unit-10-q1-a',

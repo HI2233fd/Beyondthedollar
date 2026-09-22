@@ -59,7 +59,7 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
         : !ctx.hasJob
           ? 'goto-office'
           : ctx.paystubCount === 0
-            ? 'phone'
+            ? 'advance-payday'
             : 'goto-grocery',
     })
   }
@@ -99,15 +99,27 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
   }
 
   if (ctx.hasJob) {
-    options.push({
-      id: 'career-performance',
-      category: 'career',
-      title: `Keep performing at ${ctx.career}`,
-      reason: 'Paychecks land weekly. Use time scale between shifts and check Phone → Jobs.',
-      locationHint: 'Summit Tower',
-      priority: 55,
-      action: 'phone',
-    })
+    if (ctx.paystubCount === 0) {
+      options.push({
+        id: 'career-collect-payday',
+        category: 'career',
+        title: 'Collect your first payday (Sept 2)',
+        reason: 'Skip ahead to morning of Sept 2 and get ~$300 take-home deposited.',
+        locationHint: 'Phone / time skip',
+        priority: 92,
+        action: 'advance-payday',
+      })
+    } else {
+      options.push({
+        id: 'career-performance',
+        category: 'career',
+        title: `Keep performing at ${ctx.career}`,
+        reason: 'Paychecks land weekly. Check Phone → Jobs between shifts.',
+        locationHint: 'Summit Tower',
+        priority: 55,
+        action: 'goto-office',
+      })
+    }
   }
 
   if (!ctx.metJordan) {

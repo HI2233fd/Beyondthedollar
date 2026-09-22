@@ -69,7 +69,17 @@ export interface ActivityOption {
   locationHint?: string
   personHint?: string
   priority: number
-  action?: 'phone' | 'goto-bank' | 'goto-office' | 'goto-grocery' | 'goto-college' | 'goto-home' | 'goto-city' | 'talk-jordan' | 'open-map'
+  action?:
+    | 'phone'
+    | 'goto-bank'
+    | 'goto-office'
+    | 'goto-grocery'
+    | 'goto-college'
+    | 'goto-home'
+    | 'goto-city'
+    | 'talk-jordan'
+    | 'open-map'
+    | 'advance-payday'
 }
 
 export interface GuideBeat {
@@ -90,6 +100,7 @@ export interface GuideContext {
   firstDayDone: boolean
   guideDismissed: string[]
   lifeLevel: number
+  paystubCount: number
 }
 
 export interface GoalMilestone {

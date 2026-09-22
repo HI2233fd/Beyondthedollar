@@ -24,10 +24,15 @@ import {
   CAR_SAVINGS_MIN,
   CREDIT_PRODUCT_MIN,
   CREDIT_SCORE_ON_FILE,
+  FIRST_PAYDAY_TOTAL_MINUTES,
   GRADUATION_CASH,
   HOME_CREDIT_MIN,
   HOME_DOWN_PAYMENT,
   INVEST_SAVINGS_MIN,
+  OFFICE_HOURLY,
+  OFFICE_HOURS_PER_WEEK,
+  OFFICE_WEEKLY_GROSS,
+  PAYROLL_TAX_RATE,
 } from './simulation/progression'
 import { HOME_BEDROOM_START } from './cityLayout'
 import {
@@ -245,6 +250,10 @@ interface GameState {
   pushMessage: (from: string, body: string, opportunityId?: string) => void
   markMessagesRead: () => void
   syncMilestones: () => void
+  /** Jump clock forward to the next payday (capped) for paced early-game flow. */
+  advanceToPayday: () => void
+  /** Jump to a specific scene with optional notice — used by pacing “Go” buttons. */
+  goDo: (action: ActivityOption['action']) => void
 
   openCheckingAccount: () => void
   deposit: (amount: number) => string | null
@@ -807,6 +816,74 @@ function createGameStore(): UseGameStore {
       }),
     })
   },
+  advanceToPayday: () => {
+    const s = get()
+    if (!s.hasJob || !s.hasCheckingAccount) return
+    const target = Math.max(s.totalMinutes + 30, s.nextPaydayAt)
+    const delta = target - s.totalMinutes
+    if (delta <= 0) return
+    get().advanceTime(delta + 1)
+    set({
+      lastBillNotice: 'Time skipped to payday',
+      optionsOpen: false,
+      phoneOpen: false,
+    })
+    get().showReward('PAYDAY ARRIVES', ['Clock advanced to your direct deposit', 'Check Phone → Jobs for the stub'], 0)
+  },
+  goDo: (action) => {
+    get().closeOptions()
+    const enter = get().enterScene
+    switch (action) {
+      case 'phone':
+        get().openPhone()
+        break
+      case 'goto-bank':
+        enter('bank', { pos: [0, 0, 2], yaw: Math.PI })
+        break
+      case 'goto-office':
+        enter('office', { pos: [0, 0, 2.5], yaw: Math.PI })
+        break
+      case 'goto-grocery':
+        enter('grocery', { pos: [0, 0, 2.5], yaw: Math.PI })
+        break
+      case 'goto-college':
+        enter('college', { pos: [0, 0, 2], yaw: Math.PI })
+        break
+      case 'goto-home':
+        enter('home', HOME_BEDROOM_START)
+        break
+      case 'goto-city':
+        enter('city', { pos: [-36, 0, -16], yaw: 0 })
+        break
+      case 'talk-jordan':
+        enter('home', HOME_BEDROOM_START)
+        window.setTimeout(() => {
+          get().talkToNpc('home-jordan', 'Jordan', 'Guided catch-up')
+          get().openDialogue({
+            name: 'Roommate — Jordan',
+            text: 'Ready for the next move? Bank → job → payday is the starter arc.',
+            options: [
+              {
+                label: 'Show my options',
+                action: () => get().openOptions(),
+                close: true,
+              },
+              { label: 'Later', close: true },
+            ],
+          })
+        }, 350)
+        break
+      case 'advance-payday':
+        get().advanceToPayday()
+        break
+      case 'open-map':
+        get().openPhone()
+        break
+      default:
+        get().openOptions()
+    }
+  },
+
   completeMissionObjective: (missionId, objectiveId) => {
     const s = get()
     const before = s.missions.find((m) => m.id === missionId)
@@ -991,25 +1068,39 @@ function createGameStore(): UseGameStore {
     const hired = roll < rate
     const score = s.interviewCorrect
     if (hired) {
-      const nextPay = s.totalMinutes + 7 * MINUTES_PER_DAY
-      const message = `You’re hired as Office Assistant ($16/hr, 15 hrs/week, ~$240 gross). Interview score ${score}/3. Direct deposit hits checking weekly — open your Phone to confirm job status and upcoming payday.`
+      // First payday is morning of Sept 2 — not a full week later.
+      const nextPay = Math.max(s.totalMinutes + 90, FIRST_PAYDAY_TOTAL_MINUTES)
+      const netEst = Math.round(OFFICE_WEEKLY_GROSS * (1 - PAYROLL_TAX_RATE))
+      const message = `You’re hired as Office Assistant ($${OFFICE_HOURLY}/hr, ${OFFICE_HOURS_PER_WEEK} hrs/week, ~$${OFFICE_WEEKLY_GROSS} gross / ~$${netEst} take-home after tax). Interview score ${score}/3. First direct deposit hits checking on Sept 2 morning — check Phone → Jobs.`
       set({
         hasJob: true,
         career: 'Office Assistant',
-        weeklyIncome: 16 * 15,
+        weeklyIncome: OFFICE_WEEKLY_GROSS,
         nextPaydayAt: nextPay,
         interviewActive: false,
         interviewCorrect: 0,
         interviewAsked: 0,
-        lastBillNotice: 'Hired · Office Assistant — check Phone for job & payday',
+        lastBillNotice: `Hired · first payday Sept 2 (~$${netEst} net)`,
       })
       get().awardXp(80, 'Hired')
       get().bumpSkill('communication', 0.3)
       get().bumpSkill('problemSolving', 0.2)
       get().completeMissionObjective('first-opportunity', 'get-hired')
       get().rememberDecision(`hired-summit-${score}`)
-      get().showReward('YOU’RE HIRED', ['Office Assistant', '+$240/wk gross before tax', '+80 XP', 'Skill · Communication'], 80)
-      get().pushMessage('Diane · Summit', 'Welcome aboard. Direct deposit hits weekly — check Phone → Jobs for payday.')
+      get().showReward(
+        'YOU’RE HIRED',
+        [
+          'Office Assistant',
+          `~$${netEst}/wk take-home after tax`,
+          'First payday: Sept 2 morning',
+          '+80 XP',
+        ],
+        80,
+      )
+      get().pushMessage(
+        'Diane · Summit',
+        `Welcome aboard. Your first direct deposit (~$${netEst} after tax) lands Sept 2. Open What can I do? if you want to skip ahead to payday.`,
+      )
       get().syncMilestones()
       get().autosave()
       return { hired: true, message }
@@ -1123,7 +1214,7 @@ function createGameStore(): UseGameStore {
       let guard = 0
       while (totalMinutes >= nextPaydayAt && guard++ < 8) {
         const gross = Math.round(prev.weeklyIncome * incomeFactor)
-        const tax = Math.round(gross * 0.18)
+        const tax = Math.round(gross * PAYROLL_TAX_RATE)
         const net = gross - tax
         bank += net
         const stub: Paystub = {
