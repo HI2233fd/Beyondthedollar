@@ -1,6 +1,5 @@
 import { useGame } from './GameState'
 import { CURRICULUM, nextAvailableTopic } from './curriculum'
-import { BUILDING_LABEL } from './curriculum/buildingMap'
 
 export function CurriculumHUD() {
   const unlocked = useGame((s) => s.unlockedUnitNumber)
@@ -10,30 +9,31 @@ export function CurriculumHUD() {
   const next = nextAvailableTopic(unlocked, completed)
   const doneCount = completed.length
   const total = CURRICULUM.reduce((n, u) => n + u.topics.length, 0)
+  const pct = total ? Math.round((doneCount / total) * 100) : 0
 
-  return (
-    <div className="curriculum-hud">
+  const body = (
+    <>
       <div className="curriculum-hud-top">
-        <span className="curriculum-hud-label">Course</span>
-        <span className="curriculum-hud-progress">
-          {doneCount}/{total} topics · Unit {Math.min(unlocked, 21)}/21
+        <span className="soft-kicker">Course</span>
+        <span className="soft-note curriculum-count">
+          {doneCount}/{total}
         </span>
       </div>
-      {next ? (
-        <>
-          <div className="curriculum-hud-unit">
-            Unit {next.unit.number}: {next.unit.title}
-          </div>
-          <div className="curriculum-hud-hint">
-            Go to <strong>{BUILDING_LABEL[next.unit.buildingId]}</strong> · press E at LEARN
-          </div>
-          <button type="button" className="curriculum-hud-btn" onClick={() => openLesson(next.topic.lesson.id)}>
-            Open current lesson
-          </button>
-        </>
-      ) : (
-        <div className="curriculum-hud-unit">Curriculum complete — nice work!</div>
-      )}
-    </div>
+      <span className="soft-value">{next ? `Unit ${next.unit.number}` : 'Complete'}</span>
+      <span className="soft-note curriculum-title">{next ? next.unit.title : 'Nice work'}</span>
+      <div className="soft-track" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Course progress">
+        <div style={{ width: `${pct}%` }} />
+      </div>
+    </>
+  )
+
+  if (!next) {
+    return <div className="curriculum-hud soft-widget">{body}</div>
+  }
+
+  return (
+    <button type="button" className="curriculum-hud soft-widget" onClick={() => openLesson(next.topic.lesson.id)}>
+      {body}
+    </button>
   )
 }

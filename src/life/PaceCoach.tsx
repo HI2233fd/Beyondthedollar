@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useGame } from '../GameState'
 import type { ActivityOption } from './characterLook'
+import { activeGuideBeat } from './guideBeats'
 
 /**
  * Persistent “next move” coach — keeps the game paced instead of open-world roam.
@@ -21,6 +22,23 @@ export function PaceCoach() {
   const missions = useGame((s) => s.missions)
   const goDo = useGame((s) => s.goDo)
   const openOptions = useGame((s) => s.openOptions)
+  const guideOn = useGame((s) => {
+    if (!s.characterCreated) return false
+    return (
+      activeGuideBeat({
+        scene: s.scene,
+        hasChecking: s.hasCheckingAccount,
+        hasJob: s.hasJob,
+        metAnyone: Object.values(s.relationships).some((r) => r.met),
+        phoneOpenedOnce: s.phoneOpenedOnce,
+        leftHome: s.leftHome,
+        firstDayDone: !!s.missions.find((m) => m.id === 'first-day')?.completed,
+        guideDismissed: s.guideDismissed,
+        lifeLevel: s.lifeLevel,
+        paystubCount: s.paystubs.length,
+      }) != null
+    )
+  })
 
   const idleSince = useRef(Date.now())
   const nudged = useRef(false)
@@ -58,21 +76,21 @@ export function PaceCoach() {
     return () => clearInterval(t)
   }, [blocked, openOptions])
 
-  if (!characterCreated || !top || optionsOpen || phoneOpen || dialogue || lessonOpen || quizOpen) {
+  if (!characterCreated || guideOn || !top || optionsOpen || phoneOpen || dialogue || lessonOpen || quizOpen) {
     return null
   }
 
   return (
-    <div className="pace-coach">
-      <div className="pace-coach-label">Next up</div>
-      <strong className="pace-coach-title">{top.title}</strong>
-      <p className="pace-coach-reason">{top.reason}</p>
-      <div className="pace-coach-actions">
-        <button type="button" className="pace-go" onClick={() => goDo(top.action)}>
+    <div className="coach-card">
+      <span className="soft-kicker">Next</span>
+      <strong>{top.title}</strong>
+      <p>{top.reason}</p>
+      <div className="coach-actions">
+        <button type="button" className="soft-go" onClick={() => top.action && goDo(top.action)}>
           Go
         </button>
-        <button type="button" className="pace-more" onClick={openOptions}>
-          More options
+        <button type="button" className="soft-ghost" onClick={openOptions}>
+          More
         </button>
       </div>
     </div>

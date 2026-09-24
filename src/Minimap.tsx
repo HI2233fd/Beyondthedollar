@@ -39,6 +39,8 @@ export function Minimap() {
     return () => cancelAnimationFrame(raf)
   }, [rig])
 
+  if (scene !== 'city') return null
+
   return (
     <div className="minimap">
       <div className="minimap-inner" style={{ width: SIZE, height: SIZE }}>

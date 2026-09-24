@@ -6,6 +6,15 @@ const money = (n: number) => `$${n.toLocaleString('en-US', { maximumFractionDigi
 /** Review speeds only — default is always 1× (1 real sec ≈ 1 game minute). */
 const SCALES = [1, 4] as const
 
+function PhoneGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="7" y="2.5" width="10" height="19" rx="2.5" />
+      <path d="M11 18.5h2" />
+    </svg>
+  )
+}
+
 export function GameHUD() {
   const cash = useGame((s) => s.cash)
   const bank = useGame((s) => s.bank)
@@ -25,24 +34,19 @@ export function GameHUD() {
   const phoneOpen = useGame((s) => s.phoneOpen)
   const hasJob = useGame((s) => s.hasJob)
   const career = useGame((s) => s.career)
-  const weeklyIncome = useGame((s) => s.weeklyIncome)
-  const incomeFactor = useGame((s) => s.incomeFactor)
-  const nextPaydayAt = useGame((s) => s.nextPaydayAt)
   const dueBillIds = useGame((s) => s.dueBillIds)
-  const recurringBills = useGame((s) => s.recurringBills)
   const debt = useGame((s) => s.debt)
   const lifeLevel = useGame((s) => s.lifeLevel)
   const xp = useGame((s) => s.xp)
   const xpToNext = useGame((s) => s.xpToNext())
   const playerName = useGame((s) => s.playerName)
-  const season = useGame((s) => s.season)
 
   const cal = stampFromMinutes(totalMinutes)
-  const phase = dayPhase(cal.minuteOfDay)
-  const weekly = Math.round(weeklyIncome * incomeFactor)
-  const nextBill = [...recurringBills].sort((a, b) => a.nextDueTotalMinutes - b.nextDueTotalMinutes)[0]
-  const nextBillStamp = nextBill ? stampFromMinutes(nextBill.nextDueTotalMinutes) : null
-  const paydayStamp = hasJob ? stampFromMinutes(nextPaydayAt) : null
+  const phaseName = dayPhase(cal.minuteOfDay)
+  const phase = phaseName.charAt(0).toUpperCase() + phaseName.slice(1)
+  const available = cash + (hasChecking ? bank : 0)
+  const xpPct = Math.min(100, Math.round((xp / Math.max(1, xpToNext)) * 100))
+  const initial = (playerName || 'Y').slice(0, 1).toUpperCase()
 
   const cycleScale = () => {
     const i = SCALES.indexOf(timeScale as (typeof SCALES)[number])
@@ -52,88 +56,77 @@ export function GameHUD() {
   return (
     <>
       <div className="hud">
-        <div className="hud-item">
-          <span className="hud-label">{playerName || 'You'}</span>
-          <span className="hud-value">
-            Lv {lifeLevel}
-          </span>
-          <span className="hud-sub">
-            {xp}/{xpToNext} XP
-          </span>
+        <div className="soft-widget player-widget">
+          <div className="soft-avatar" aria-hidden>
+            {initial}
+          </div>
+          <div className="player-widget-body">
+            <span className="soft-kicker">Level {lifeLevel}</span>
+            <span className="soft-value">{playerName || 'You'}</span>
+            <div className="soft-track" role="progressbar" aria-valuenow={xpPct} aria-valuemin={0} aria-valuemax={100} aria-label="Experience">
+              <div style={{ width: `${xpPct}%` }} />
+            </div>
+          </div>
         </div>
-        <div className="hud-item">
-          <span className="hud-label">Cash</span>
-          <span className="hud-value">{money(cash)}</span>
+
+        <div className="soft-widget money-widget">
+          <span className="soft-kicker">Available</span>
+          <span className="soft-amount">{money(available)}</span>
+          <div className="money-split">
+            <span>Cash {money(cash)}</span>
+            <span className="money-dot" aria-hidden />
+            <span>Checking {hasChecking ? money(bank) : '—'}</span>
+          </div>
+          {hasChecking && savings > 0 && <span className="soft-note">Savings {money(savings)}</span>}
         </div>
-        <div className="hud-item">
-          <span className="hud-label">Checking</span>
-          <span className="hud-value">{hasChecking ? money(bank) : '—'}</span>
-          {hasChecking && savings > 0 && (
-            <span className="hud-sub">Savings {money(savings)}</span>
-          )}
-        </div>
-        <div className="hud-item">
-          <span className="hud-label">Credit</span>
-          <span className="hud-value">{creditEstablished ? creditScore : '—'}</span>
-          {debt > 0 && <span className="hud-sub hud-warn">Debt {money(debt)}</span>}
-        </div>
-        <div className="hud-item hud-status">
-          <span className="hud-label">Job</span>
-          <span className={`hud-value hud-status-line ${hasJob ? 'hud-ok' : ''}`}>
-            {hasJob ? career : 'Unemployed'}
-          </span>
-          {hasJob ? (
-            <span className="hud-sub">
-              ~{money(weekly)}/wk · pay {paydayStamp?.month}/{paydayStamp?.dayOfMonth}
+
+        <div className="soft-widget life-widget">
+          <div className="life-widget-top">
+            <span className="soft-kicker">
+              {cal.weekday} · {phase}
             </span>
-          ) : (
-            <span className="hud-sub">Open checking → interview at Summit</span>
-          )}
-        </div>
-        <div className="hud-item hud-loc">
-          <span className="hud-label">Location</span>
-          <span className="hud-value">{SCENE_LOCATION[scene]}</span>
-          {dueBillIds.length > 0 ? (
-            <span className="hud-sub hud-warn">{dueBillIds.length} bill(s) due now</span>
-          ) : nextBill && nextBillStamp ? (
-            <span className="hud-sub">
-              Next: {nextBill.label} {nextBillStamp.month}/{nextBillStamp.dayOfMonth}
-            </span>
-          ) : null}
-        </div>
-        <div className="hud-item hud-time">
-          <span className="hud-label">
-            {cal.weekday} · {phase} · {season}
+            <button type="button" className="soft-scale" onClick={cycleScale} title="Time speed (1× default, 4× review)">
+              {timeScale}×
+            </button>
+          </div>
+          <span className="soft-value">{cal.clockLabel}</span>
+          <span className="soft-note life-place">
+            {cal.month}/{cal.dayOfMonth} · {SCENE_LOCATION[scene]}
           </span>
-          <span className="hud-value">
-            {cal.month}/{cal.dayOfMonth} {cal.clockLabel}
-          </span>
-          <button type="button" className="hud-time-scale" onClick={cycleScale} title="Time speed (1× default, 4× review)">
-            {timeScale}×
-          </button>
+          <div className="soft-pills">
+            <span className={`soft-pill ${hasJob ? 'soft-pill-ok' : ''}`}>{hasJob ? career : 'Unemployed'}</span>
+            {creditEstablished && <span className="soft-pill">Credit {creditScore}</span>}
+            {debt > 0 && <span className="soft-pill soft-pill-warn">Debt {money(debt)}</span>}
+            {dueBillIds.length > 0 && (
+              <span className="soft-pill soft-pill-warn">
+                {dueBillIds.length} bill{dueBillIds.length === 1 ? '' : 's'} due
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
+      {(billNotice || marketNotice) && (
+        <button
+          type="button"
+          className={`bill-toast ${!billNotice && marketNotice ? 'market-toast' : ''}`}
+          onClick={billNotice ? dismissBill : dismissMarket}
+        >
+          {billNotice || marketNotice}
+          <span>Dismiss</span>
+        </button>
+      )}
+
       <button
         type="button"
-        className={`phone-fab ${phoneOpen ? 'active' : ''} ${hasJob ? 'phone-fab-hired' : ''}`}
+        className={`phone-fab dock-btn ${phoneOpen ? 'active' : ''}`}
         onClick={openPhone}
         title="Open phone"
       >
+        <PhoneGlyph />
         Phone
         {hasJob && <span className="phone-fab-dot" aria-hidden />}
       </button>
-
-      {billNotice && (
-        <button type="button" className="bill-toast" onClick={dismissBill}>
-          {billNotice} · dismiss
-        </button>
-      )}
-      {marketNotice && !billNotice && (
-        <button type="button" className="bill-toast market-toast" onClick={dismissMarket}>
-          {marketNotice} · dismiss
-        </button>
-      )}
     </>
   )
 }

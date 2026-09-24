@@ -193,8 +193,10 @@ export function Game() {
         {!characterCreated && <CharacterCreation />}
         {characterCreated && (
           <>
-            <GameHUD />
-            <CurriculumHUD />
+            <div className="hud-column">
+              <GameHUD />
+              <CurriculumHUD />
+            </div>
             <Minimap />
             <MissionTracker />
             <PaceCoach />

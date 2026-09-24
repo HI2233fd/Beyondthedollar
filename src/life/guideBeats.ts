@@ -5,7 +5,7 @@ export const GUIDE_BEATS: GuideBeat[] = [
   {
     id: 'wake',
     title: 'Step 1 — Look around',
-    text: 'You’re home. Take a quick look, then hit Go on your mission tracker to head outside.',
+    text: 'You’re home. Take a quick look around, then tap Got it.',
     dismissKey: 'wake',
     when: (c) => c.scene === 'home' && !c.guideDismissed.includes('wake'),
   },
