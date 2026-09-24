@@ -12,6 +12,7 @@ import {
 } from './progression'
 import { DOWNTOWN_UNLOCK_LEVEL, LIFE_GOALS, SKILL_LABELS, type SkillId } from '../life/types'
 import { ACHIEVEMENT_DEFS } from '../life/missions'
+import { LifePhone } from '../education/LifePhone'
 
 const money = (n: number) =>
   `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -31,6 +32,7 @@ type AppId =
   | 'bank'
   | 'invest'
   | 'skills'
+  | 'life'
   | 'map'
   | 'news'
   | 'achievements'
@@ -45,6 +47,7 @@ const APPS: { id: AppId; label: string; icon: string }[] = [
   { id: 'bank', label: 'Bank', icon: '🏦' },
   { id: 'invest', label: 'Invest', icon: '📈' },
   { id: 'skills', label: 'Skills', icon: '🧠' },
+  { id: 'life', label: 'Life', icon: '🌱' },
   { id: 'map', label: 'Map', icon: '🗺️' },
   { id: 'news', label: 'News', icon: '📰' },
   { id: 'achievements', label: 'Wins', icon: '🏆' },
@@ -445,6 +448,8 @@ export function PhonePanel() {
             )}
           </div>
         )}
+
+        {app === 'life' && <LifePhone />}
 
         {app === 'skills' && (
           <div className="phone-body">

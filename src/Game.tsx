@@ -17,6 +17,9 @@ import { DialogueSystem } from './DialogueSystem'
 import { InteractionPrompt } from './InteractionSystem'
 import { LifeEventSystem } from './LifeEventSystem'
 import { LessonPanel } from './LessonPanel'
+import { ConceptLessonPanel } from './education/ConceptLessonPanel'
+import { CheckpointPanel } from './education/CheckpointPanel'
+import { ExplainerCard } from './education/ExplainerCard'
 import { QuizPanel } from './QuizPanel'
 import { CurriculumHUD } from './CurriculumHUD'
 import { CityLighting } from './simulation/CityLighting'
@@ -208,6 +211,9 @@ export function Game() {
             <CartPanel />
             <DialogueSystem />
             <LessonPanel />
+            <ConceptLessonPanel />
+            <CheckpointPanel />
+            <ExplainerCard />
             <QuizPanel />
             <ScenarioPanel />
             <InvestingPanel />

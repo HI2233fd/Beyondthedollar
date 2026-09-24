@@ -483,6 +483,17 @@ canvas {
   padding: 8px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+button.phone-row.life-concept {
+  width: 100%;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .phone-row-total {
   font-weight: 800;
   border-bottom: none;
@@ -1434,6 +1445,18 @@ button.curriculum-hud:hover {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.explainer-card {
+  bottom: 268px;
+  z-index: 16;
+  width: min(420px, calc(100vw - 188px));
+  max-height: min(280px, calc(100vh - 360px));
+  overflow: auto;
+}
+.explainer-card p {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
 .coach-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .soft-go {
   flex: 1;
@@ -1808,6 +1831,10 @@ button.curriculum-hud:hover {
     width: auto;
     transform: none;
     bottom: 92px;
+  }
+  .explainer-card {
+    bottom: 250px;
+    width: auto;
   }
   .controls-hint {
     display: none;
