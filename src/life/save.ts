@@ -1,3 +1,4 @@
+import type { EducationState } from '../education/types'
 import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Skills } from './types'
 import { DEFAULT_APPEARANCE, DEFAULT_SKILLS } from './types'
 
@@ -58,6 +59,8 @@ export interface SaveBlob {
   homeStatus: string
   scene: string
   firstDayStarted: boolean
+  /** Absent on saves from before the financial-mastery backbone. */
+  financialEdu?: EducationState
 }
 
 export function emptyLifeDefaults() {

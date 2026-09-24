@@ -1,5 +1,17 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import { CURRICULUM, unlockedAfterCompleting } from './curriculum'
+import {
+  backfillEducation,
+  buildCheckpoint,
+  initialEducation,
+  levelTitle,
+  markExplainerSeen,
+  normalizeEducation,
+  recordEvent,
+  submitActive,
+  unlocksForPassedLevel,
+} from './education'
+import type { EducationState } from './education/types'
 import { MINUTES_PER_DAY, START_TOTAL_MINUTES, stampFromMinutes } from './simulation/time'
 import { getScenario, registerRuntimeScenario, type ScenarioStat } from './simulation/scenarios'
 import {
@@ -156,6 +168,19 @@ interface GameState {
   activeQuizId: string | null
   quizAnswers: Record<string, number>
   quizSubmitted: boolean
+
+  /** Financial mastery. Separate from XP `lifeLevel` and from the diploma string `education`. */
+  financialEdu: EducationState
+  activeConceptId: string | null
+  checkpointOpen: boolean
+  recordEducation: (event: string, meta?: { cartTotal?: number }) => void
+  openConcept: (id: string) => void
+  closeConcept: () => void
+  dismissExplainer: (id: string) => void
+  startCheckpoint: () => void
+  answerCheckpoint: (questionId: string, choice: number) => void
+  submitCheckpoint: () => void
+  closeCheckpoint: () => void
 
   totalMinutes: number
   timeScale: number
@@ -376,6 +401,7 @@ type Persistable = ReturnType<typeof emptyLifeDefaults> & {
   carStatus: CarStatus
   homeStatus: HomeStatus
   scene: SceneId
+  financialEdu: EducationState
 }
 
 function toSaveBlob(s: Persistable): SaveBlob {
@@ -433,6 +459,7 @@ function toSaveBlob(s: Persistable): SaveBlob {
     carStatus: s.carStatus,
     homeStatus: s.homeStatus,
     scene: s.scene,
+    financialEdu: s.financialEdu,
   }
 }
 
@@ -496,6 +523,19 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     carStatus: blob.carStatus as CarStatus,
     homeStatus: blob.homeStatus as HomeStatus,
     scene: (blob.scene as SceneId) || 'home',
+    financialEdu: blob.financialEdu
+      ? normalizeEducation(blob.financialEdu)
+      : backfillEducation(initialEducation(), {
+          hasChecking: blob.hasCheckingAccount,
+          hasJob: !!blob.hasJob,
+          hasCreditCard: blob.hasCreditCard,
+          savings: blob.savings,
+          paystubCount: blob.paystubs?.length ?? 0,
+          completedTopicIds: blob.completedTopicIds ?? [],
+          goalsCount: blob.goals?.length ?? 0,
+        }),
+    activeConceptId: null,
+    checkpointOpen: false,
     spawn: blob.scene === 'city' ? { pos: [0, 0, 0], yaw: Math.PI } : HOME_BEDROOM_START,
     transitioning: true,
     phoneOpen: false,
@@ -545,6 +585,10 @@ function createGameStore(): UseGameStore {
   activeQuizId: null,
   quizAnswers: {},
   quizSubmitted: false,
+
+  financialEdu: initialEducation(),
+  activeConceptId: null,
+  checkpointOpen: false,
 
   totalMinutes: START_TOTAL_MINUTES,
   timeScale: 1,
@@ -650,6 +694,9 @@ function createGameStore(): UseGameStore {
       prompt: null,
       phoneOpen: false,
       lastBillNotice: `Welcome, ${name}. Your first day starts at home.`,
+      financialEdu: recordEvent(initialEducation(), 'goal-set', START_TOTAL_MINUTES),
+      activeConceptId: null,
+      checkpointOpen: false,
     })
     get().showReward('LIFE BEGINS', [`${name} · age ${age}`, 'Explore home · meet people · build your path'], 0)
     get().autosave()
@@ -663,7 +710,14 @@ function createGameStore(): UseGameStore {
   },
   newGameWipe: () => {
     clearSave()
-    set({ ...emptyLifeDefaults(), appearance: { ...DEFAULT_APPEARANCE }, skills: { ...DEFAULT_SKILLS } })
+    set({
+      ...emptyLifeDefaults(),
+      appearance: { ...DEFAULT_APPEARANCE },
+      skills: { ...DEFAULT_SKILLS },
+      financialEdu: initialEducation(),
+      activeConceptId: null,
+      checkpointOpen: false,
+    })
   },
   autosave: () => {
     const s = get()
@@ -896,6 +950,7 @@ function createGameStore(): UseGameStore {
       return { ...m, objectives, completed: objectives.every((o) => o.done) }
     })
     set({ missions })
+    get().recordEducation(objectiveId)
     const after = missions.find((m) => m.id === missionId)
     if (!after?.completed) return
 
@@ -962,6 +1017,7 @@ function createGameStore(): UseGameStore {
     })
     get().awardXp(50, 'Opened checking')
     get().bumpSkill('financial', 0.3)
+    get().recordEducation('open-checking')
     get().completeMissionObjective('first-opportunity', 'open-checking')
     get().autosave()
   },
@@ -971,13 +1027,16 @@ function createGameStore(): UseGameStore {
     const amt = Math.min(amount, s.cash)
     if (amt <= 0) return 'No cash to deposit.'
     set({ cash: s.cash - amt, bank: s.bank + amt })
+    get().recordEducation('deposit')
     return null
   },
   withdraw: (amount) => {
     const s = get()
     if (!s.hasCheckingAccount) return 'Open a checking account first.'
     const amt = Math.min(amount, s.bank)
+    if (amt <= 0) return 'Nothing in checking to withdraw.'
     set({ bank: s.bank - amt, cash: s.cash + amt })
+    get().recordEducation('withdraw')
     return null
   },
   openSavings: (amount) => {
@@ -999,6 +1058,7 @@ function createGameStore(): UseGameStore {
       creditEstablished: true,
       creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
     })
+    get().recordEducation('open-savings')
     get().completeMissionObjective('first-opportunity', 'shop-or-save')
     get().bumpSkill('financial', 0.15)
     get().autosave()
@@ -1015,6 +1075,7 @@ function createGameStore(): UseGameStore {
       creditScore: s.creditEstablished ? bumpCredit(s.creditScore, true, 1) : CREDIT_SCORE_ON_FILE,
     })
     if (amt > 0) {
+      get().recordEducation('transfer-savings')
       get().completeMissionObjective('first-opportunity', 'shop-or-save')
       get().autosave()
     }
@@ -1029,6 +1090,8 @@ function createGameStore(): UseGameStore {
     }
     if (s.hasCreditCard) return 'You already have a card on file.'
     set({ hasCreditCard: true })
+    get().recordEducation('credit-card')
+    get().autosave()
     return null
   },
   applyJob: () => {
@@ -1048,6 +1111,7 @@ function createGameStore(): UseGameStore {
       return 'This role requires a high school diploma (or equivalent).'
     }
     set({ interviewActive: true, interviewCorrect: 0, interviewAsked: 0 })
+    get().recordEducation('interview')
     return null
   },
   answerInterview: (correct) => {
@@ -1085,6 +1149,7 @@ function createGameStore(): UseGameStore {
       get().awardXp(80, 'Hired')
       get().bumpSkill('communication', 0.3)
       get().bumpSkill('problemSolving', 0.2)
+      get().recordEducation('get-hired')
       get().completeMissionObjective('first-opportunity', 'get-hired')
       get().rememberDecision(`hired-summit-${score}`)
       get().showReward(
@@ -1120,6 +1185,7 @@ function createGameStore(): UseGameStore {
     const paid = Math.min(total, cash)
     set({ cash: cash - paid, cart: [] })
     if (paid > 0) {
+      get().recordEducation('shop', { cartTotal: total })
       get().completeMissionObjective('first-opportunity', 'shop-or-save')
       get().bumpSkill('financial', 0.1)
       get().awardXp(15, 'Grocery run')
@@ -1135,7 +1201,7 @@ function createGameStore(): UseGameStore {
   resolveLifeEvent: () => set({ lifeEventActive: false, lifeEventOutcome: null }),
   dismissLifeEventOutcome: () => set({ lifeEventOutcome: null }),
 
-  openLesson: (lessonId) =>
+  openLesson: (lessonId) => {
     set({
       activeLessonId: lessonId,
       activeQuizId: null,
@@ -1145,7 +1211,9 @@ function createGameStore(): UseGameStore {
       prompt: null,
       investingPanelOpen: false,
       phoneOpen: false,
-    }),
+    })
+    get().recordEducation(`lesson:${lessonId}`)
+  },
   closeLesson: () => set({ activeLessonId: null }),
   startQuiz: (quizId) =>
     set({ activeQuizId: quizId, activeLessonId: null, quizAnswers: {}, quizSubmitted: false }),
@@ -1168,8 +1236,74 @@ function createGameStore(): UseGameStore {
       completedTopicIds: nextCompleted,
       unlockedUnitNumber: unlockedAfterCompleting(nextCompleted, unlockedUnitNumber),
     })
+    get().recordEducation(`quiz:${found.topic.id}`)
+    get().autosave()
   },
   closeQuiz: () => set({ activeQuizId: null, quizAnswers: {}, quizSubmitted: false }),
+
+  recordEducation: (event, meta) => {
+    const next = recordEvent(get().financialEdu, event, get().totalMinutes, meta)
+    if (next === get().financialEdu) return
+    set({ financialEdu: next })
+    if (get().characterCreated) get().autosave()
+  },
+  openConcept: (id) => {
+    const next = recordEvent(get().financialEdu, `concept:${id}`, get().totalMinutes)
+    set({ activeConceptId: id, phoneOpen: false, checkpointOpen: false, financialEdu: next })
+    if (get().characterCreated) get().autosave()
+  },
+  closeConcept: () => set({ activeConceptId: null }),
+  dismissExplainer: (id) => {
+    set({ financialEdu: markExplainerSeen(get().financialEdu, id) })
+    if (get().characterCreated) get().autosave()
+  },
+  startCheckpoint: () => {
+    const edu = get().financialEdu
+    if (edu.activeCheckpoint && !edu.activeCheckpoint.submitted) {
+      set({ checkpointOpen: true, phoneOpen: false, activeConceptId: null })
+      return
+    }
+    const built = buildCheckpoint(edu, edu.financialLevel)
+    set({
+      financialEdu: { ...edu, activeCheckpoint: built },
+      checkpointOpen: true,
+      phoneOpen: false,
+      activeConceptId: null,
+    })
+  },
+  answerCheckpoint: (questionId, choice) => {
+    const edu = get().financialEdu
+    const active = edu.activeCheckpoint
+    if (!active || active.submitted) return
+    set({
+      financialEdu: {
+        ...edu,
+        activeCheckpoint: { ...active, answers: { ...active.answers, [questionId]: choice } },
+      },
+    })
+  },
+  submitCheckpoint: () => {
+    const before = get().financialEdu
+    const next = submitActive(before, get().totalMinutes)
+    set({ financialEdu: next })
+    const newly = next.rewardedLevels.find((level) => !before.rewardedLevels.includes(level))
+    if (newly != null) {
+      const gained = unlocksForPassedLevel(newly)
+      get().awardXp(30, 'Financial checkpoint')
+      get().showReward(
+        `FINANCIAL LEVEL ${next.financialLevel}`,
+        [
+          `${levelTitle(newly)} checkpoint cleared`,
+          next.financialLevel === newly ? levelTitle(newly) : `Now: ${levelTitle(next.financialLevel)}`,
+          ...gained.map((u) => (u.live ? u.title : `${u.title} · ready when that part of life exists`)),
+        ],
+        30,
+      )
+      set({ checkpointOpen: false })
+    }
+    get().autosave()
+  },
+  closeCheckpoint: () => set({ checkpointOpen: false }),
 
   advanceTime: (deltaMinutes) => {
     if (deltaMinutes <= 0) return
@@ -1271,6 +1405,8 @@ function createGameStore(): UseGameStore {
       paystubs,
       nextPaydayAt,
     })
+    if (paydayHit) get().recordEducation('payday')
+    if (dueBillIds.length > prev.dueBillIds.length) get().recordEducation('bill-due')
     if (paydayHit) {
       get().completeMissionObjective('first-opportunity', 'first-paycheck')
       get().unlockAchievement('first-paycheck')
@@ -1305,6 +1441,7 @@ function createGameStore(): UseGameStore {
     const scenario = getScenario(activeScenarioId)
     const choice = scenario?.choices.find((c) => c.id === choiceId)
     if (!choice) return
+    get().recordEducation(`scenario:${activeScenarioId}`)
 
     const patch: Record<string, unknown> = {
       scenarioChoiceId: choiceId,
@@ -1692,6 +1829,8 @@ function createGameStore(): UseGameStore {
     const cost = s.assetPrices[id] * shares
     if (s.bank < cost) return 'Not enough checking balance.'
     set({ bank: s.bank - cost, holdings: { ...s.holdings, [id]: s.holdings[id] + shares } })
+    get().recordEducation('invest-buy')
+    get().autosave()
     return null
   },
   sellAsset: (id, shares = 1) => {
@@ -1699,6 +1838,8 @@ function createGameStore(): UseGameStore {
     if (s.holdings[id] < shares) return 'You do not own that many shares.'
     const proceeds = s.assetPrices[id] * shares
     set({ bank: s.bank + proceeds, holdings: { ...s.holdings, [id]: s.holdings[id] - shares } })
+    get().recordEducation('invest-sell')
+    get().autosave()
     return null
   },
 
@@ -1728,6 +1869,7 @@ function createGameStore(): UseGameStore {
       })
       return
     }
+    get().recordEducation('car-deal')
     s.openScenario('car-buy-vs-lease')
   },
   openHomeDealScenario: () => {
@@ -1740,6 +1882,7 @@ function createGameStore(): UseGameStore {
       })
       return
     }
+    get().recordEducation('home-deal')
     s.openScenario('home-rent-vs-buy')
   },
 }))
@@ -1848,6 +1991,7 @@ export function fireRandomExpenseIfDue() {
     )
   }
   s.openScenario(scenario.id, `rand-expense-${scenario.id}`)
+  s.recordEducation('surprise-expense')
   const count = s.randomExpenseCount + 1
   useGame.setState({
     nextRandomExpenseAt: rollNextExpenseAt(s.totalMinutes, { first: count === 0 }),
