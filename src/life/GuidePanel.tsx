@@ -15,7 +15,6 @@ export function GuidePanel() {
   const lifeLevel = useGame((s) => s.lifeLevel)
   const paystubs = useGame((s) => s.paystubs)
   const dismissGuide = useGame((s) => s.dismissGuide)
-  const openOptions = useGame((s) => s.openOptions)
   const goDo = useGame((s) => s.goDo)
 
   if (!characterCreated) return null
@@ -56,41 +55,26 @@ export function GuidePanel() {
   })()
 
   return (
-    <div className="guide-card">
-      <div className="guide-avatar" aria-hidden>
-        <span>✦</span>
-      </div>
-      <div className="guide-body">
-        <div className="guide-label">Guide</div>
-        <strong>{beat.title}</strong>
-        <p>{beat.text}</p>
-        <div className="guide-actions">
-          {primaryAction && (
-            <button
-              type="button"
-              className="btn-primary guide-btn"
-              onClick={() => {
-                dismissGuide(beat.dismissKey)
-                goDo(primaryAction)
-              }}
-            >
-              Go
-            </button>
-          )}
-          <button type="button" className="btn-ghost guide-btn" onClick={() => dismissGuide(beat.dismissKey)}>
-            Got it
-          </button>
+    <div className="coach-card">
+      <span className="soft-kicker">Guide</span>
+      <strong>{beat.title}</strong>
+      <p>{beat.text}</p>
+      <div className="coach-actions">
+        {primaryAction && (
           <button
             type="button"
-            className="btn-ghost guide-btn"
+            className="soft-go"
             onClick={() => {
               dismissGuide(beat.dismissKey)
-              openOptions()
+              goDo(primaryAction)
             }}
           >
-            Options
+            Go
           </button>
-        </div>
+        )}
+        <button type="button" className="soft-ghost" onClick={() => dismissGuide(beat.dismissKey)}>
+          Got it
+        </button>
       </div>
     </div>
   )

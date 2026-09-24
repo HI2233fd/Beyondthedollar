@@ -109,14 +109,26 @@ export function WhatCanIDoPanel() {
   )
 }
 
+function OptionsGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="6" cy="7" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="6" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="6" cy="17" r="1.4" fill="currentColor" stroke="none" />
+      <path d="M10 7h8M10 12h8M10 17h8" />
+    </svg>
+  )
+}
+
 export function WhatCanIDoFab() {
   const open = useGame((s) => s.openOptions)
   const characterCreated = useGame((s) => s.characterCreated)
   const count = useGame((s) => s.activityOptions().length)
   if (!characterCreated) return null
   return (
-    <button type="button" className="options-fab" onClick={open} title="What can I do?">
-      What can I do?
+    <button type="button" className="options-fab dock-btn" onClick={open} title="What can I do?">
+      <OptionsGlyph />
+      Options
       <span className="options-fab-count">{count}</span>
     </button>
   )
