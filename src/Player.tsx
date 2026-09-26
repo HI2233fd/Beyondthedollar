@@ -87,16 +87,20 @@ export function Player() {
     // Interaction: find nearest, update prompt, handle E press.
     const store = useGame.getState()
     const near = findNearest(g.position, store.scene)
-    store.setPrompt(locked ? null : near ? near.prompt : null)
+    const seated = !!store.dayLife?.sittingId
+    const drivingNow = !!store.dayLife?.drivingVehicleId
+    store.setPrompt(locked && !seated && !drivingNow ? null : near ? near.prompt : null)
 
     const wantInteract = consumeInteract()
-    if (wantInteract && !locked && near) {
+    if (wantInteract && (!locked || seated) && !drivingNow && near) {
       near.onInteract()
     }
   })
 
+  const driving = useGame((s) => !!s.dayLife.drivingVehicleId)
+
   return (
-    <group ref={mergeRefs(rig.groupRef, localRef)} scale={1}>
+    <group ref={mergeRefs(rig.groupRef, localRef)} scale={1} visible={!driving}>
       <Humanoid look={appearance} walkRef={rig.walk} movingRef={rig.moving} anim={rig.moving.current ? 'walk' : 'idle'} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
         <circleGeometry args={[0.5, 16]} />

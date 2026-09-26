@@ -665,9 +665,9 @@ export function reducePlay(state: PlaySnapshot, action: PlayAction): PlayResult 
     const job = EMPLOYERS[action.employerId]
     const app = appOf(d.lifeFacts, action.employerId)
     const window = inInterviewWindow(d.totalMinutes, app.interviewAt)
-    const where = action.employerId === 'summit' ? 'office' : action.employerId === 'freshmart' ? 'grocery' : 'city'
+    const where = action.employerId === 'summit' ? 'office' : action.employerId === 'freshmart' ? 'grocery' : action.employerId === 'bean' ? 'cafe' : 'city'
     if (app.status !== 'scheduled') d.error = 'No interview is scheduled.'
-    else if (d.scene !== where) d.error = `Show up at ${job.where} for the interview.`
+    else if (d.scene !== where && !(action.employerId === 'bean' && d.scene === 'city')) d.error = `Show up at ${job.where} for the interview.`
     else if (window === 'early') d.error = `Too early. They expect you ${clockLabel(app.interviewAt)}.`
     else if (window === 'late') d.error = 'That window already closed.'
     else {
@@ -732,9 +732,9 @@ export function reducePlay(state: PlaySnapshot, action: PlayAction): PlayResult 
     }
   } else if (action.type === 'shift') {
     const job = EMPLOYERS[action.employerId]
-    const where = action.employerId === 'summit' ? 'office' : action.employerId === 'freshmart' ? 'grocery' : 'city'
+    const where = action.employerId === 'summit' ? 'office' : action.employerId === 'freshmart' ? 'grocery' : 'cafe'
     if (d.lifeFacts.employerId !== action.employerId || !d.hasJob) d.error = 'You are not on this schedule.'
-    else if (d.scene !== where) d.error = `Clock in at ${job.where}.`
+    else if (d.scene !== where && !(action.employerId === 'bean' && d.scene === 'city')) d.error = `Clock in at ${job.where}.`
     else if (d.totalMinutes < d.lifeFacts.lastShiftAt + 6 * 60) d.error = 'You already worked a shift. Rest at least a few hours.'
     else {
       const accuracy = Math.max(0, Math.min(1, action.accuracy))

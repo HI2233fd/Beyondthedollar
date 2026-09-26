@@ -19,6 +19,7 @@ function shouldPauseTime(): boolean {
     s.phoneOpen ||
     s.transitioning ||
     !!s.activity ||
+    s.classSessionOpen ||
     s.optionsOpen
   )
 }

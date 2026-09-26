@@ -48,6 +48,9 @@ import {
 } from './simulation/progression'
 import { HOME_BEDROOM_START } from './cityLayout'
 import { debitChecking, defaultLifeFacts, normalizeLifeFacts, type LifeFacts } from './life/play/logic'
+import { defaultDayLife, normalizeDayLife, type DayLife } from './life/day/types'
+import { reduceDay, groceryToPantry, type DayAction } from './life/day/reduce'
+import { businessOpen, type BusinessId } from './life/day/schedule'
 import { rentMission, settleInMission } from './life/play/missions'
 import { reducePlay, type ActivitySession, type PlayAction } from './life/play/reduce'
 import {
@@ -72,7 +75,7 @@ import { buildGoalMilestones, syncGoalMilestonesFromState } from './life/goalCha
 import { normalizeAppearance, type GoalMilestone, type PhoneMessage, type RewardPopup } from './life/characterLook'
 import type { ActivityOption } from './life/characterLook'
 
-export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home'
+export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home' | 'cafe'
 
 export interface DialogueOption {
   label: string
@@ -250,7 +253,13 @@ interface GameState {
   goalMilestones: GoalMilestone[]
   lifeFacts: LifeFacts
   activity: ActivitySession | null
+  dayLife: DayLife
+  classSessionOpen: boolean
   play: (action: PlayAction) => string | null
+  dayAct: (action: DayAction) => string | null
+  openClassSession: () => void
+  closeClassSession: () => void
+  tryEnterBusiness: (scene: SceneId, spawn: Spawn, businessId?: BusinessId) => string | null
 
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
@@ -414,6 +423,7 @@ type Persistable = ReturnType<typeof emptyLifeDefaults> & {
   guideDismissed: string[]
   leftHome: boolean
   phoneOpenedOnce: boolean
+  dayLife: DayLife
 }
 
 function toSaveBlob(s: Persistable): SaveBlob {
@@ -477,6 +487,7 @@ function toSaveBlob(s: Persistable): SaveBlob {
     guideDismissed: s.guideDismissed,
     leftHome: s.leftHome,
     phoneOpenedOnce: s.phoneOpenedOnce,
+    dayLife: s.dayLife,
   }
 }
 
@@ -504,7 +515,9 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     rewardPopup: null,
     messages: blob.messages ?? [],
     lifeFacts: normalizeLifeFacts(blob.lifeFacts, blob.totalMinutes, blob.hasCheckingAccount),
+    dayLife: normalizeDayLife(blob.dayLife, blob.totalMinutes),
     activity: null,
+    classSessionOpen: false,
     goalMilestones: buildGoalMilestones(blob.goals),
     cash: blob.cash,
     bank: blob.bank,
@@ -648,6 +661,8 @@ function createGameStore(): UseGameStore {
   ...emptyLifeDefaults(),
   lifeFacts: defaultLifeFacts(START_TOTAL_MINUTES),
   activity: null,
+  dayLife: defaultDayLife(START_TOTAL_MINUTES),
+  classSessionOpen: false,
 
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
@@ -724,11 +739,13 @@ function createGameStore(): UseGameStore {
       rewardPopup: null,
       lifeFacts: facts,
       activity: null,
+      dayLife: defaultDayLife(START_TOTAL_MINUTES, look.shirt, look.pants),
+      classSessionOpen: false,
       messages: [
         {
           id: 'msg-welcome',
           from: 'Jordan',
-          body: `${name}, rent is on the 12-day mark. I’m around if you want to talk — the block has more than one thing going on.`,
+          body: `${name}, it is early. Eat something, pick clothes, then get to campus before first period. Rent is still on the 12-day mark.`,
           atTotalMinutes: START_TOTAL_MINUTES,
           read: false,
         },
@@ -740,12 +757,12 @@ function createGameStore(): UseGameStore {
       dialogue: null,
       prompt: null,
       phoneOpen: false,
-      lastBillNotice: `Welcome, ${name}. Your first day starts at home.`,
+      lastBillNotice: `Welcome, ${name}. Morning at home — then school.`,
       financialEdu: recordEvent(initialEducation(), 'goal-set', START_TOTAL_MINUTES),
       activeConceptId: null,
       checkpointOpen: false,
     })
-    get().showReward('LIFE BEGINS', [`${name} · age ${age}`, '$420 cash · rent in 12 days', 'Step outside when you are ready'], 0)
+    get().showReward('LIFE BEGINS', [`${name} · age ${age}`, '$420 cash · 7:00 AM', 'Eat, dress, get to campus'], 0)
     get().autosave()
   },
   hasSaveGame: () => !!loadSave(),
@@ -766,6 +783,8 @@ function createGameStore(): UseGameStore {
       checkpointOpen: false,
       lifeFacts: defaultLifeFacts(START_TOTAL_MINUTES),
       activity: null,
+      dayLife: defaultDayLife(START_TOTAL_MINUTES),
+      classSessionOpen: false,
     })
   },
   autosave: () => {
@@ -1056,8 +1075,73 @@ function createGameStore(): UseGameStore {
     for (const event of result.education) get().recordEducation(event)
     for (const xp of result.xp) get().awardXp(xp.amount, xp.reason)
     if (result.reward) get().showReward(result.reward.title, result.reward.lines, result.xp[0]?.amount)
+    if (action.type === 'car' && !result.error && get().lifeFacts.carModelId) {
+      const modelId = get().lifeFacts.carModelId!
+      const colors: Record<string, string> = { hatch: '#64748b', sedan: '#1d4ed8', coupe: '#b91c1c' }
+      const labels: Record<string, string> = { hatch: '2014 Hatchback', sedan: '2021 Sedan', coupe: 'Sports Coupe' }
+      get().dayAct({
+        type: 'add-vehicle',
+        vehicle: {
+          id: `veh-${modelId}`,
+          modelId,
+          label: labels[modelId] ?? modelId,
+          color: colors[modelId] ?? '#64748b',
+          x: -22,
+          z: 3.5,
+          yaw: 0,
+        },
+      })
+    }
     if (result.advanceMinutes > 0) get().advanceTime(result.advanceMinutes)
     else if (s.characterCreated && action.type !== 'sync') get().autosave()
+    return null
+  },
+
+  dayAct: (action) => {
+    const s = get()
+    const result = reduceDay(s.dayLife, s.totalMinutes, action)
+    if (result.error) return result.error
+    const patch: Partial<GameState> = { dayLife: result.dayLife }
+    if (result.appearancePatch) {
+      patch.appearance = {
+        ...s.appearance,
+        shirt: result.appearancePatch.shirt ?? s.appearance.shirt,
+        pants: result.appearancePatch.pants ?? s.appearance.pants,
+        jacket: result.appearancePatch.jacket === undefined ? s.appearance.jacket : result.appearancePatch.jacket,
+      }
+    }
+    if (result.notice) patch.lastBillNotice = result.notice
+    set(patch)
+    for (const e of result.education) get().recordEducation(e)
+    if (result.advanceMinutes > 0) get().advanceTime(result.advanceMinutes)
+    else if (action.type !== 'tick-needs') get().autosave()
+    return null
+  },
+
+  openClassSession: () => set({ classSessionOpen: true, phoneOpen: false, dialogue: null }),
+  closeClassSession: () => {
+    const s = get()
+    set({ classSessionOpen: false, dayLife: { ...s.dayLife, schoolSeated: false, handRaised: false, sittingId: null } })
+  },
+
+  tryEnterBusiness: (scene, spawn, businessId) => {
+    const id = businessId ?? (scene as BusinessId)
+    if (scene !== 'home' && scene !== 'city') {
+      const closed = !businessOpen(id, get().totalMinutes)
+      if (closed) {
+        const msg =
+          id === 'college'
+            ? 'Campus is closed. Weekdays until mid-afternoon.'
+            : id === 'cafe'
+              ? 'Bean Street is closed right now.'
+              : id === 'bank'
+                ? 'FirstCity is closed. Weekdays 9–5.'
+                : 'This place is closed right now.'
+        get().openDialogue({ name: SCENE_LOCATION[scene] ?? 'Door', text: msg, options: [{ label: 'OK', close: true }] })
+        return msg
+      }
+    }
+    get().enterScene(scene, spawn)
     return null
   },
 
@@ -1325,7 +1409,12 @@ function createGameStore(): UseGameStore {
     const after = get()
     const liquid = after.cash + after.bank + after.savings
     const firstShop = s.lifeFacts.groceryAt === 0
+    const pantryItems = groceryToPantry(
+      s.cart.map((c) => ({ id: c.id, name: c.name, needKey: c.needKey })),
+      s.totalMinutes,
+    )
     get().play({ type: 'grocery', spent: total, needs: needKeys.size, liquidAfter: liquid })
+    if (pantryItems.length) get().dayAct({ type: 'buy-food', items: pantryItems })
     get().recordEducation('shop', { cartTotal: total })
     get().completeMissionObjective('first-opportunity', 'shop-or-save')
     get().bumpSkill('financial', 0.1)
@@ -1554,6 +1643,9 @@ function createGameStore(): UseGameStore {
       get().autosave()
     }
     if (get().characterCreated) get().play({ type: 'sync' })
+    if (get().characterCreated && deltaMinutes > 0) {
+      get().dayAct({ type: 'tick-needs', deltaMinutes })
+    }
   },
   setTimeScale: (scale) => set({ timeScale: Math.max(0, scale) }),
 
@@ -2044,9 +2136,10 @@ export const SCENE_LOCATION: Record<SceneId, string> = {
   city: 'City Streets',
   bank: 'FirstCity Bank',
   grocery: 'FreshMart Grocery',
-  college: 'Merridian College',
+  college: 'Merridian High',
   office: 'Summit Office',
   home: 'Maple Apartments',
+  cafe: 'Bean Street Café',
 }
 
 export function processDueBillsAsScenarios() {
