@@ -69,6 +69,8 @@ export interface ActivityOption {
   locationHint?: string
   personHint?: string
   priority: number
+  /** Direct life-play action. Prefer this over warping the player. */
+  play?: { type: string; [key: string]: unknown }
   action?:
     | 'phone'
     | 'goto-bank'

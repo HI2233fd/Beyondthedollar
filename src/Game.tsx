@@ -34,6 +34,7 @@ import { GuidePanel } from './life/GuidePanel'
 import { WhatCanIDoPanel, WhatCanIDoFab } from './life/WhatCanIDoPanel'
 import { RewardToast } from './life/RewardToast'
 import { PaceCoach } from './life/PaceCoach'
+import { ActivityPanel } from './life/play/ActivityPanel'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -111,6 +112,7 @@ export function Game() {
   const phoneOpen = useGame((s) => s.phoneOpen)
   const optionsOpen = useGame((s) => s.optionsOpen)
   const rewardPopup = useGame((s) => s.rewardPopup)
+  const activityOpen = useGame((s) => s.activity)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -170,6 +172,7 @@ export function Game() {
     phoneOpen ||
     optionsOpen ||
     !!rewardPopup ||
+    !!activityOpen ||
     !characterCreated
   const showHint = characterCreated && !locked && !modalOpen
 
@@ -218,6 +221,7 @@ export function Game() {
             <ScenarioPanel />
             <InvestingPanel />
             <PhonePanel />
+            <ActivityPanel />
             <LifeEventSystem />
             <TimeSystem />
             <LifeLoop />

@@ -64,6 +64,7 @@ export function movementLocked(): boolean {
     s.phoneOpen ||
     s.optionsOpen ||
     !!s.rewardPopup ||
+    !!s.activity ||
     !s.characterCreated
   )
 }

@@ -17,7 +17,9 @@ function shouldPauseTime(): boolean {
     !!s.activeScenarioId ||
     s.investingPanelOpen ||
     s.phoneOpen ||
-    s.transitioning
+    s.transitioning ||
+    !!s.activity ||
+    s.optionsOpen
   )
 }
 
@@ -78,6 +80,7 @@ function maybeFireCalendarTriggers() {
   for (const tr of CALENDAR_TRIGGERS) {
     if (tr.kind !== 'calendar') continue
     if (tr.once !== false && s.firedTriggerIds.includes(tr.id)) continue
+    if (!s.lifeFacts.neighborhoodDiscovered || s.paystubs.length === 0) return
     if (s.totalMinutes >= tr.atTotalMinutes) {
       if (import.meta.env.DEV) console.debug('[calendar] fire', tr.id, tr.scenarioId)
       s.openScenario(tr.scenarioId, tr.id)

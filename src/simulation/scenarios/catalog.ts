@@ -1,4 +1,5 @@
 import type { ScenarioDef, ScenarioTrigger } from './types'
+import { MINUTES_PER_DAY } from '../time'
 
 /** Runtime (generated) scenarios — random expenses, one-off notices. */
 const runtimeScenarios = new Map<string, ScenarioDef>()
@@ -161,14 +162,14 @@ export const CALENDAR_TRIGGERS: ScenarioTrigger[] = [
     id: 'cal-demo-opportunity',
     kind: 'calendar',
     scenarioId: 'demo-opportunity-cost',
-    atTotalMinutes: 8 * 60 + 25,
+    atTotalMinutes: 4 * MINUTES_PER_DAY + 18 * 60,
     once: true,
   },
   {
     id: 'cal-demo-price',
     kind: 'calendar',
     scenarioId: 'demo-price-spike',
-    atTotalMinutes: 8 * 60 + 90,
+    atTotalMinutes: 5 * MINUTES_PER_DAY + 10 * 60,
     once: true,
   },
 ]

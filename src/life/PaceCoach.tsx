@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useGame } from '../GameState'
 import type { ActivityOption } from './characterLook'
 import { activeGuideBeat } from './guideBeats'
 
-/**
- * Persistent “next move” coach — keeps the game paced instead of open-world roam.
- * Auto-surfaces after short idle stretches and always offers a one-tap Go.
- */
+/** Quiet reminder that several choices exist. It does not warp the player. */
 export function PaceCoach() {
   const characterCreated = useGame((s) => s.characterCreated)
   const optionsOpen = useGame((s) => s.optionsOpen)
@@ -20,7 +17,6 @@ export function PaceCoach() {
   const hasChecking = useGame((s) => s.hasCheckingAccount)
   const paystubs = useGame((s) => s.paystubs)
   const missions = useGame((s) => s.missions)
-  const goDo = useGame((s) => s.goDo)
   const openOptions = useGame((s) => s.openOptions)
   const guideOn = useGame((s) => {
     if (!s.characterCreated) return false
@@ -40,11 +36,15 @@ export function PaceCoach() {
     )
   })
 
-  const idleSince = useRef(Date.now())
-  const nudged = useRef(false)
-
   const top: ActivityOption | null = useMemo(() => {
     if (!characterCreated) return null
+    // Recompute when life changes. activityOptions reads the store at call time.
+    void scene
+    void hasJob
+    void hasChecking
+    void missions
+    void optionsOpen
+    void paystubs.length
     const list = useGame.getState().activityOptions()
     return list[0] ?? null
   }, [characterCreated, scene, hasJob, hasChecking, paystubs.length, missions, optionsOpen])
@@ -58,39 +58,16 @@ export function PaceCoach() {
     !!quizOpen ||
     !!rewardPopup
 
-  // Reset idle clock when player engages something
-  useEffect(() => {
-    idleSince.current = Date.now()
-    nudged.current = false
-  }, [scene, optionsOpen, phoneOpen, dialogue, lessonOpen, quizOpen, rewardPopup, hasJob, hasChecking])
-
-  // Soft nudge: open options if idle too long (paced push)
-  useEffect(() => {
-    if (blocked) return
-    const t = window.setInterval(() => {
-      if (nudged.current) return
-      if (Date.now() - idleSince.current < 14000) return
-      nudged.current = true
-      openOptions()
-    }, 2000)
-    return () => clearInterval(t)
-  }, [blocked, openOptions])
-
-  if (!characterCreated || guideOn || !top || optionsOpen || phoneOpen || dialogue || lessonOpen || quizOpen) {
-    return null
-  }
+  if (!characterCreated || guideOn || !top || blocked) return null
 
   return (
-    <div className="coach-card">
-      <span className="soft-kicker">Next</span>
+    <div className="coach-card coach-quiet">
+      <span className="soft-kicker">Open</span>
       <strong>{top.title}</strong>
       <p>{top.reason}</p>
       <div className="coach-actions">
-        <button type="button" className="soft-go" onClick={() => top.action && goDo(top.action)}>
-          Go
-        </button>
         <button type="button" className="soft-ghost" onClick={openOptions}>
-          More
+          See choices
         </button>
       </div>
     </div>

@@ -38,13 +38,17 @@ export function LifeLoop() {
         exploredHome.current = true
         // slight delay so player actually moves around bedroom
         const t = window.setTimeout(() => {
-          useGame.getState().completeMissionObjective('first-day', 'explore-home')
+          const g = useGame.getState()
+          g.completeMissionObjective('first-day', 'explore-home')
+          g.completeMissionObjective('settle-in', 'explore-home')
         }, 1800)
         return () => clearTimeout(t)
       }
     }
     if (scene === 'city') {
       g.completeMissionObjective('first-day', 'leave-home')
+      g.completeMissionObjective('settle-in', 'leave-home')
+      g.play({ type: 'sync' })
       if (!exploredCity.current) {
         exploredCity.current = true
         const t = window.setTimeout(() => {
@@ -84,11 +88,8 @@ export function LifeLoop() {
 
   useEffect(() => {
     if (!characterCreated) return
-    // grocery checkout or savings move counts as money decision
-    if (savings > 0 || cash < 200) {
-      useGame.getState().completeMissionObjective('first-opportunity', 'shop-or-save')
-    }
-  }, [characterCreated, savings, cash])
+    useGame.getState().play({ type: 'sync' })
+  }, [characterCreated, totalMinutes, hasChecking, hasJob, paystubs.length, savings, scene])
 
   // Achievements
   useEffect(() => {

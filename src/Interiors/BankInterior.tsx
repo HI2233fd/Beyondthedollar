@@ -11,28 +11,27 @@ function bankDialogue(): Dialogue {
   const g = useGame.getState()
   const leave = { label: 'Leave', close: true as const }
 
-  if (!g.hasCheckingAccount) {
+  if (!g.hasCheckingAccount || (g.lifeFacts.bankPlanId == null && !g.lifeFacts.legacyBank)) {
     return {
       name: 'Bank Teller — Marcus',
-      text: 'Welcome — first time? Let’s open a free checking account so paychecks and bills have somewhere to land.',
+      text: 'First time? I can show you three checking products. I will not pick one for you — the fees and overdraft rules become yours.',
       options: [
         {
-          label: 'Open checking (deposit graduation cash)',
-          action: () => useGame.getState().openCheckingAccount(),
-          next: {
-            name: 'Bank Teller — Marcus',
-            text: 'You’re set. Checking is open and your graduation gift is deposited. Come back for savings, credit, or the invest desk.',
-            options: [leave],
-          },
+          label: 'Compare accounts',
+          action: () => useGame.getState().play({ type: 'open', activity: { kind: 'bank' } }),
+          close: true,
         },
         leave,
       ],
     }
   }
 
+  const plan = g.lifeFacts.bankPlanId
   return {
     name: 'Bank Teller — Marcus',
-    text: 'Checking is open. What do you need?',
+    text: plan
+      ? `You have ${plan === 'everyday' ? 'Everyday Checking' : plan === 'plus' ? 'Plus Checking' : 'the Online Account'}. Those rules are already in effect. What do you need?`
+      : 'Checking is open. What do you need?',
     options: [
       {
         label: 'Move $100 into savings',

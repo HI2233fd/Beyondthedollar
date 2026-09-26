@@ -4,7 +4,27 @@ import { Chair, Plant, Rug, WallClock } from '../props'
 import { LearningStation } from '../curriculum/LearningStation'
 import { KioskStation } from '../simulation/KioskStation'
 import { useGame, type Dialogue } from '../GameState'
+import { useInteractable } from '../InteractionSystem'
 import { LIFE_GOALS } from '../life/types'
+import { nextMorning } from '../life/play/logic'
+
+function BedRest() {
+  useInteractable({
+    id: 'home-bed',
+    scene: 'home',
+    position: [-4.4, 0, -3],
+    radius: 2.2,
+    prompt: 'Sleep until morning',
+    onInteract: () => {
+      const s = useGame.getState()
+      const err = s.play({ type: 'wait', until: nextMorning(s.totalMinutes) })
+      if (err) {
+        s.openDialogue({ name: 'Apartment', text: err, options: [{ label: 'OK', close: true }] })
+      }
+    },
+  })
+  return null
+}
 
 function homeDialogue(): Dialogue {
   const s = useGame.getState()
@@ -28,42 +48,44 @@ function homeDialogue(): Dialogue {
         ? `Good to see you again. ${goal ? `Still chasing ${goal.label}?` : 'How’s the money stuff going?'}`
         : `You’re basically family at this point. I’ve got your back on the next step.`
 
+  const facts = s.lifeFacts
+  const options: Dialogue['options'] = []
+  if (facts.jordanLoan > 0) {
+    options.push({
+      label: `Repay $${facts.jordanLoan.toFixed(0)}`,
+      action: () => {
+        const err = useGame.getState().play({ type: 'repay-jordan' })
+        useGame.getState().openDialogue({
+          name: 'Roommate — Jordan',
+          text: err ?? 'We’re square.',
+          options: [{ label: 'OK', close: true }],
+        })
+      },
+    })
+  }
+  if (!s.hasJob && Object.values(facts.apps).some((a) => a?.status === 'rejected' || a?.status === 'missed')) {
+    options.push({
+      label: 'Practice an interview',
+      action: () => useGame.getState().play({ type: 'open', activity: { kind: 'practice' } }),
+      close: true,
+    })
+  }
+  options.push({
+    label: 'What’s going on out there?',
+    next: {
+      name: 'Roommate — Jordan',
+      text: goal
+        ? `You said you care about ${goal.label}. That does not pick your day for you. The phone has the live list — bank, work, food, Maya.`
+        : 'Check your phone. A few things are open. I am not going to walk you to one of them.',
+      options: [{ label: 'Fair', close: true }],
+    },
+  })
+  options.push({ label: 'Later', close: true })
+
   return {
     name: 'Roommate — Jordan',
     text: intro,
-    options: [
-      {
-        label: 'What should I do today?',
-        next: {
-          name: 'Roommate — Jordan',
-          text:
-            goal?.id === 'education'
-              ? 'Swing by Merridian College, then open checking at FirstCity so tuition talk is real.'
-              : goal?.id === 'investing'
-                ? 'Bank account → job → savings cushion → INVEST desk. Don’t skip the cushion.'
-                : 'Explore the block, open checking at FirstCity Bank, then interview Diane at Summit for your first paycheck.',
-          options: [
-            {
-              label: 'Thanks — I’ll start',
-              action: () => {
-                useGame.getState().completeMissionObjective('first-day', 'first-opportunity')
-                useGame.getState().awardXp(10, 'Jordan tip')
-              },
-              close: true,
-            },
-          ],
-        },
-      },
-      {
-        label: 'Any money tip?',
-        next: {
-          name: 'Roommate — Jordan',
-          text: 'Keep lease/mortgage papers in one folder. Surprise bills hurt less when you can find your stuff.',
-          options: [{ label: 'Thanks', close: true }],
-        },
-      },
-      { label: 'Later', close: true },
-    ],
+    options,
   }
 }
 
@@ -71,6 +93,7 @@ function homeDialogue(): Dialogue {
 export function HomeInterior() {
   return (
     <Room w={14} d={12} floor="#d6cfc4" wall="#f3efe8">
+      <BedRest />
       {/* —— Bedroom (west side) —— */}
       <group position={[-3.8, 0, -2.2]}>
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>

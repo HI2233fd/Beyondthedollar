@@ -8,6 +8,7 @@ import { useGame } from './GameState'
 import { dayPhase, stampFromMinutes } from './simulation/time'
 import { DowntownDistrict } from './life/DowntownDistrict'
 import { DowntownTeaser } from './life/DowntownTeaser'
+import { useInteractable } from './InteractionSystem'
 
 const ROAD_HALF = 4.5
 const SIDEWALK_OUTER = 8
@@ -33,6 +34,55 @@ const PARKED_CARS: { x: number; z: number; color: string; rot?: number }[] = [
   { x: -3.4, z: 22, color: '#e67e22', rot: 0 },
   { x: 3.4, z: 34, color: '#3498db', rot: 0 },
 ]
+
+function HelpWanted() {
+  useInteractable({
+    id: 'bean-board',
+    scene: 'city',
+    position: [-18, 0, 10],
+    radius: 2.4,
+    prompt: 'Bean Street Café — Help Wanted',
+    onInteract: () => {
+      const s = useGame.getState()
+      const app = s.lifeFacts.apps.bean
+      if (s.hasJob && s.lifeFacts.employerId === 'bean') {
+        if (s.lifeFacts.shiftsTotal >= 1 && !s.lifeFacts.workplaceDone) {
+          s.play({ type: 'open', activity: { kind: 'workplace' } })
+          return
+        }
+        if (s.lifeFacts.shiftsTotal >= 2 && !s.lifeFacts.reviewDone) {
+          s.play({ type: 'open', activity: { kind: 'review' } })
+          return
+        }
+        const err = s.play({ type: 'open', activity: { kind: 'shift', employerId: 'bean' } })
+        if (err) s.openDialogue({ name: 'Bean Street', text: err, options: [{ label: 'OK', close: true }] })
+        return
+      }
+      if (app?.status === 'scheduled') {
+        const err = s.play({ type: 'open', activity: { kind: 'interview', employerId: 'bean' } })
+        if (err) s.openDialogue({ name: 'Bean Street', text: err, options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.play({ type: 'open', activity: { kind: 'posting', employerId: 'bean' } })
+    },
+  })
+  return (
+    <group position={[-18, 0, 10]}>
+      <mesh position={[0, 1.3, 0]} castShadow>
+        <boxGeometry args={[0.12, 2.4, 0.12]} />
+        <meshStandardMaterial color="#44403c" />
+      </mesh>
+      <mesh position={[0, 2.15, 0.08]} castShadow>
+        <boxGeometry args={[1.5, 0.9, 0.06]} />
+        <meshStandardMaterial color="#fef3c7" />
+      </mesh>
+      <mesh position={[0, 2.15, 0.12]}>
+        <boxGeometry args={[1.35, 0.22, 0.02]} />
+        <meshStandardMaterial color="#b45309" />
+      </mesh>
+    </group>
+  )
+}
 
 export function City() {
   const totalMinutes = useGame((s) => s.totalMinutes)
@@ -275,6 +325,7 @@ export function City() {
 
       <DowntownDistrict />
       <DowntownTeaser />
+      <HelpWanted />
     </group>
   )
 }
