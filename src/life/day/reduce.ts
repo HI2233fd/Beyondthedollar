@@ -62,8 +62,14 @@ export function reduceDay(state: DayLife, totalMinutes: number, action: DayActio
 
   if (action.type === 'tick-needs') {
     const dm = Math.max(0, action.deltaMinutes)
-    d.hunger = clamp(d.hunger - dm * 0.045)
-    d.energy = clamp(d.energy - dm * 0.028)
+    if (dm >= 4 * 60) {
+      // Overnight jump (sleep / long wait): light hunger drop, keep rested energy.
+      d.hunger = clamp(d.hunger - 12)
+      d.energy = clamp(Math.max(d.energy, 88))
+    } else {
+      d.hunger = clamp(d.hunger - dm * 0.045)
+      d.energy = clamp(d.energy - dm * 0.028)
+    }
   } else if (action.type === 'eat') {
     const idx = d.pantry.findIndex((f) => f.id === action.foodId)
     if (idx < 0) error = 'That food is gone.'
