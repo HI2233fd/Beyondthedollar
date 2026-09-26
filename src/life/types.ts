@@ -58,12 +58,34 @@ export interface NpcRelation {
   lastTalkAt: number
 }
 
-export type MissionCategory = 'main' | 'side' | 'opportunity' | 'challenge' | 'hidden' | 'completed'
+export type MissionCategory =
+  | 'main'
+  | 'side'
+  | 'opportunity'
+  | 'challenge'
+  | 'hidden'
+  | 'completed'
+  | 'career'
+  | 'financial'
+  | 'event'
+
+/** Lifecycle for anything the player can pursue. Missing status on old saves means active, or completed. */
+export type MissionStatus =
+  | 'locked'
+  | 'available'
+  | 'discovered'
+  | 'accepted'
+  | 'active'
+  | 'completed'
+  | 'failed'
+  | 'expired'
 
 export interface MissionObjective {
   id: string
   label: string
   done: boolean
+  /** Does not block mission completion. */
+  optional?: boolean
 }
 
 export interface Mission {
@@ -78,6 +100,22 @@ export interface Mission {
   locationHint?: string
   personHint?: string
   completed: boolean
+  status?: MissionStatus
+  /** Stable curriculum concept ids this mission practices. Lessons stay separate. */
+  conceptIds?: string[]
+  deadlineAt?: number | null
+  chainId?: string
+  failReason?: string
+}
+
+export function missionStatus(m: Mission): MissionStatus {
+  if (m.status) return m.status
+  return m.completed ? 'completed' : 'active'
+}
+
+export function isOpenMission(m: Mission): boolean {
+  const status = missionStatus(m)
+  return status === 'active' || status === 'accepted' || status === 'discovered'
 }
 
 export type Season = 'spring' | 'summer' | 'fall' | 'winter'

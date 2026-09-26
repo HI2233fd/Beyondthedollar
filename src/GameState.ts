@@ -47,6 +47,9 @@ import {
   PAYROLL_TAX_RATE,
 } from './simulation/progression'
 import { HOME_BEDROOM_START } from './cityLayout'
+import { debitChecking, defaultLifeFacts, normalizeLifeFacts, type LifeFacts } from './life/play/logic'
+import { rentMission, settleInMission } from './life/play/missions'
+import { reducePlay, type ActivitySession, type PlayAction } from './life/play/reduce'
 import {
   type CharacterAppearance,
   type LifeGoalId,
@@ -62,7 +65,7 @@ import {
   relationTierFromAffinity,
   xpNeededForLevel,
 } from './life/types'
-import { ACHIEVEMENT_DEFS, createFirstDayMission, createPersonalizedOpportunity } from './life/missions'
+import { ACHIEVEMENT_DEFS } from './life/missions'
 import { clearSave, emptyLifeDefaults, loadSave, writeSave, type SaveBlob } from './life/save'
 import { computeActivityOptions, type OptionContext } from './life/optionsEngine'
 import { buildGoalMilestones, syncGoalMilestonesFromState } from './life/goalChains'
@@ -88,6 +91,7 @@ export interface CartItem {
   id: string
   name: string
   price: number
+  needKey?: string | null
 }
 
 export interface Spawn {
@@ -244,6 +248,9 @@ interface GameState {
   rewardPopup: RewardPopup | null
   messages: PhoneMessage[]
   goalMilestones: GoalMilestone[]
+  lifeFacts: LifeFacts
+  activity: ActivitySession | null
+  play: (action: PlayAction) => string | null
 
   setPrompt: (p: string | null) => void
   openDialogue: (d: Dialogue) => void
@@ -290,7 +297,7 @@ interface GameState {
 
   addToCart: (item: CartItem) => void
   clearCart: () => void
-  checkout: () => number
+  checkout: (from?: 'cash' | 'bank') => number
 
   triggerLifeEvent: () => void
   resolveLifeEvent: (choice: 'savings' | 'credit' | 'delay') => void
@@ -402,6 +409,11 @@ type Persistable = ReturnType<typeof emptyLifeDefaults> & {
   homeStatus: HomeStatus
   scene: SceneId
   financialEdu: EducationState
+  lifeFacts: LifeFacts
+  messages: { id: string; from: string; body: string; atTotalMinutes: number; read: boolean; opportunityId?: string }[]
+  guideDismissed: string[]
+  leftHome: boolean
+  phoneOpenedOnce: boolean
 }
 
 function toSaveBlob(s: Persistable): SaveBlob {
@@ -460,6 +472,11 @@ function toSaveBlob(s: Persistable): SaveBlob {
     homeStatus: s.homeStatus,
     scene: s.scene,
     financialEdu: s.financialEdu,
+    lifeFacts: s.lifeFacts,
+    messages: s.messages,
+    guideDismissed: s.guideDismissed,
+    leftHome: s.leftHome,
+    phoneOpenedOnce: s.phoneOpenedOnce,
   }
 }
 
@@ -481,11 +498,13 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     season: blob.season,
     firstDayStarted: true,
     optionsOpen: false,
-    guideDismissed: [],
-    phoneOpenedOnce: true,
-    leftHome: true,
+    guideDismissed: blob.guideDismissed ?? ['wake', 'leave', 'open-world'],
+    phoneOpenedOnce: blob.phoneOpenedOnce ?? true,
+    leftHome: blob.leftHome ?? true,
     rewardPopup: null,
-    messages: [],
+    messages: blob.messages ?? [],
+    lifeFacts: normalizeLifeFacts(blob.lifeFacts, blob.totalMinutes, blob.hasCheckingAccount),
+    activity: null,
     goalMilestones: buildGoalMilestones(blob.goals),
     cash: blob.cash,
     bank: blob.bank,
@@ -627,6 +646,8 @@ function createGameStore(): UseGameStore {
   homeStatus: 'renting',
 
   ...emptyLifeDefaults(),
+  lifeFacts: defaultLifeFacts(START_TOTAL_MINUTES),
+  activity: null,
 
   setPrompt: (p) => {
     if (get().prompt !== p) set({ prompt: p })
@@ -651,12 +672,36 @@ function createGameStore(): UseGameStore {
   finishTransition: () => set({ transitioning: false }),
 
   beginLife: (name, age, appearance, goals) => {
-    const firstDay = createFirstDayMission()
-    const opportunity = createPersonalizedOpportunity(goals)
     const achievements: Record<string, number | null> = {}
     for (const a of ACHIEVEMENT_DEFS) achievements[a.id] = null
     const look = normalizeAppearance(appearance)
+    const facts = defaultLifeFacts(START_TOTAL_MINUTES)
+    const rentDue = START_TOTAL_MINUTES + 12 * MINUTES_PER_DAY
     set({
+      totalMinutes: START_TOTAL_MINUTES,
+      firedTriggerIds: [],
+      engagedScenarioIds: [],
+      cash: 420,
+      bank: 0,
+      savings: 0,
+      debt: 0,
+      weeklyIncome: 0,
+      hasJob: false,
+      hasCheckingAccount: false,
+      hasCreditCard: false,
+      career: 'Unemployed',
+      carStatus: 'none',
+      homeStatus: 'renting',
+      transportationAvailable: true,
+      paystubs: [],
+      ledger: [],
+      creditScore: 0,
+      creditEstablished: false,
+      recurringBills: [billInDays('rent-maple', 'Maple Apartments rent', RENT_MONTHLY, 30, START_TOTAL_MINUTES, 'rent', 12)],
+      dueBillIds: [],
+      nextRandomExpenseAt: START_TOTAL_MINUTES + 6 * MINUTES_PER_DAY,
+      randomExpenseCount: 0,
+      interviewActive: false,
       characterCreated: true,
       playerName: name,
       playerAge: age,
@@ -666,7 +711,7 @@ function createGameStore(): UseGameStore {
       xp: 0,
       skills: { ...DEFAULT_SKILLS },
       relationships: {},
-      missions: [firstDay, opportunity],
+      missions: [settleInMission(), rentMission(rentDue)],
       discoveredLocations: ['home'],
       achievements,
       decisions: [],
@@ -677,11 +722,13 @@ function createGameStore(): UseGameStore {
       phoneOpenedOnce: false,
       leftHome: false,
       rewardPopup: null,
+      lifeFacts: facts,
+      activity: null,
       messages: [
         {
           id: 'msg-welcome',
-          from: 'Guide',
-          body: `Welcome to Merridian, ${name}. Open “What can I do?” whenever you want your next options.`,
+          from: 'Jordan',
+          body: `${name}, rent is on the 12-day mark. I’m around if you want to talk — the block has more than one thing going on.`,
           atTotalMinutes: START_TOTAL_MINUTES,
           read: false,
         },
@@ -698,7 +745,7 @@ function createGameStore(): UseGameStore {
       activeConceptId: null,
       checkpointOpen: false,
     })
-    get().showReward('LIFE BEGINS', [`${name} · age ${age}`, 'Explore home · meet people · build your path'], 0)
+    get().showReward('LIFE BEGINS', [`${name} · age ${age}`, '$420 cash · rent in 12 days', 'Step outside when you are ready'], 0)
     get().autosave()
   },
   hasSaveGame: () => !!loadSave(),
@@ -717,6 +764,8 @@ function createGameStore(): UseGameStore {
       financialEdu: initialEducation(),
       activeConceptId: null,
       checkpointOpen: false,
+      lifeFacts: defaultLifeFacts(START_TOTAL_MINUTES),
+      activity: null,
     })
   },
   autosave: () => {
@@ -938,6 +987,80 @@ function createGameStore(): UseGameStore {
     }
   },
 
+  play: (action) => {
+    const s = get()
+    const result = reducePlay(
+      {
+        cash: s.cash,
+        bank: s.bank,
+        savings: s.savings,
+        debt: s.debt,
+        creditScore: s.creditScore,
+        creditEstablished: s.creditEstablished,
+        hasCheckingAccount: s.hasCheckingAccount,
+        hasCreditCard: s.hasCreditCard,
+        hasJob: s.hasJob,
+        career: s.career,
+        weeklyIncome: s.weeklyIncome,
+        monthlyExpenses: s.monthlyExpenses,
+        totalMinutes: s.totalMinutes,
+        skills: s.skills,
+        relationships: s.relationships,
+        missions: s.missions,
+        lifeFacts: s.lifeFacts,
+        paystubs: s.paystubs,
+        ledger: s.ledger,
+        recurringBills: s.recurringBills,
+        dueBillIds: s.dueBillIds,
+        carStatus: s.carStatus,
+        transportationAvailable: s.transportationAvailable,
+        messages: s.messages,
+        decisions: s.decisions,
+        activity: s.activity,
+        playerName: s.playerName,
+        leftHome: s.leftHome,
+        scene: s.scene,
+        busy: !!(
+          s.dialogue ||
+          s.phoneOpen ||
+          s.activeScenarioId ||
+          s.investingPanelOpen ||
+          s.optionsOpen ||
+          s.activeLessonId ||
+          s.activeQuizId ||
+          s.checkpointOpen ||
+          s.activeConceptId
+        ),
+      },
+      action,
+    )
+    if (result.error) return result.error
+    if (action.type === 'sync') {
+      const factsSame = JSON.stringify(result.patch.lifeFacts) === JSON.stringify(s.lifeFacts)
+      const missionsSame = JSON.stringify(result.patch.missions) === JSON.stringify(s.missions)
+      const activitySame = (result.patch.activity ?? null) === (s.activity ?? null) || JSON.stringify(result.patch.activity) === JSON.stringify(s.activity)
+      const moneySame = result.patch.bank === s.bank && result.patch.cash === s.cash && result.patch.savings === s.savings
+      if (factsSame && missionsSame && activitySame && moneySame && result.xp.length === 0 && result.education.length === 0 && !result.notice) {
+        return null
+      }
+    }
+    const ui =
+      action.type === 'open' || result.patch.activity
+        ? { phoneOpen: false, dialogue: null, optionsOpen: false, prompt: null as string | null }
+        : {}
+    set({
+      ...result.patch,
+      ...ui,
+      lastBillNotice: result.notice ?? s.lastBillNotice,
+    } as Partial<GameState>)
+    for (const event of result.education) get().recordEducation(event)
+    for (const xp of result.xp) get().awardXp(xp.amount, xp.reason)
+    if (result.reward) get().showReward(result.reward.title, result.reward.lines, result.xp[0]?.amount)
+    if (result.advanceMinutes > 0) get().advanceTime(result.advanceMinutes)
+    else if (s.characterCreated && action.type !== 'sync') get().autosave()
+    return null
+  },
+
   completeMissionObjective: (missionId, objectiveId) => {
     const s = get()
     const before = s.missions.find((m) => m.id === missionId)
@@ -947,7 +1070,8 @@ function createGameStore(): UseGameStore {
     const missions = s.missions.map((m) => {
       if (m.id !== missionId) return m
       const objectives = m.objectives.map((o) => (o.id === objectiveId ? { ...o, done: true } : o))
-      return { ...m, objectives, completed: objectives.every((o) => o.done) }
+      const completed = objectives.every((o) => o.done || o.optional)
+      return { ...m, objectives, completed, status: completed ? 'completed' : m.status }
     })
     set({ missions })
     get().recordEducation(objectiveId)
@@ -1179,19 +1303,34 @@ function createGameStore(): UseGameStore {
 
   addToCart: (item) => set({ cart: [...get().cart, item] }),
   clearCart: () => set({ cart: [] }),
-  checkout: () => {
-    const { cart, cash } = get()
-    const total = cart.reduce((sum, i) => sum + i.price, 0)
-    const paid = Math.min(total, cash)
-    set({ cash: cash - paid, cart: [] })
-    if (paid > 0) {
-      get().recordEducation('shop', { cartTotal: total })
-      get().completeMissionObjective('first-opportunity', 'shop-or-save')
-      get().bumpSkill('financial', 0.1)
-      get().awardXp(15, 'Grocery run')
-      get().rememberDecision(`grocery-${Math.round(paid)}`)
-      get().autosave()
+  checkout: (from = 'cash') => {
+    const s = get()
+    const total = Math.round(s.cart.reduce((sum, i) => sum + i.price, 0) * 100) / 100
+    if (total <= 0) return 0
+    const needKeys = new Set(s.cart.map((i) => i.needKey).filter((k): k is string => !!k))
+    if (from === 'bank') {
+      if (!s.hasCheckingAccount) return -1
+      const debit = debitChecking(s.bank, total, s.lifeFacts)
+      if (!debit.ok) return -1
+      set({
+        bank: debit.bank,
+        cart: [],
+        lifeFacts: debit.fee ? { ...s.lifeFacts, overdrafts: s.lifeFacts.overdrafts + 1 } : s.lifeFacts,
+      })
+    } else if (s.cash + 0.001 < total) {
+      return -1
+    } else {
+      set({ cash: Math.round((s.cash - total) * 100) / 100, cart: [] })
     }
+    const after = get()
+    const liquid = after.cash + after.bank + after.savings
+    const firstShop = s.lifeFacts.groceryAt === 0
+    get().play({ type: 'grocery', spent: total, needs: needKeys.size, liquidAfter: liquid })
+    get().recordEducation('shop', { cartTotal: total })
+    get().completeMissionObjective('first-opportunity', 'shop-or-save')
+    get().bumpSkill('financial', 0.1)
+    if (firstShop) get().awardXp(15, 'Grocery run')
+    get().autosave()
     return total
   },
 
@@ -1344,7 +1483,7 @@ function createGameStore(): UseGameStore {
     let paydayHit = false
 
     // Paydays (weekly) — require checking for direct deposit
-    if (prev.hasJob && prev.hasCheckingAccount) {
+    if (prev.hasJob && prev.hasCheckingAccount && !prev.lifeFacts.usesShiftPay) {
       let guard = 0
       while (totalMinutes >= nextPaydayAt && guard++ < 8) {
         const gross = Math.round(prev.weeklyIncome * incomeFactor)
@@ -1414,6 +1553,7 @@ function createGameStore(): UseGameStore {
       get().bumpSkill('financial', 0.1)
       get().autosave()
     }
+    if (get().characterCreated) get().play({ type: 'sync' })
   },
   setTimeScale: (scale) => set({ timeScale: Math.max(0, scale) }),
 
@@ -1542,9 +1682,19 @@ function createGameStore(): UseGameStore {
       if (bill) {
         const amount = bill.amount
         let paidOk = false
-        if (billPay.from === 'bank' && state.bank >= amount) {
-          patch.bank = state.bank - amount
-          paidOk = true
+        if (billPay.from === 'bank') {
+          const debit = debitChecking(state.bank, amount, state.lifeFacts)
+          if (debit.ok) {
+            patch.bank = debit.bank
+            if (debit.fee > 0) {
+              patch.lifeFacts = { ...state.lifeFacts, overdrafts: state.lifeFacts.overdrafts + 1 }
+            }
+            if (debit.note) patch.scenarioWhyOverride = debit.note
+            paidOk = true
+          } else {
+            patch.scenarioWhyOverride = `${debit.note} The bill is still due.`
+            patch.holdBill = true
+          }
         } else if (billPay.from === 'savings' && state.savings >= amount) {
           patch.savings = state.savings - amount
           paidOk = true
@@ -1555,6 +1705,9 @@ function createGameStore(): UseGameStore {
           patch.scenarioWhyOverride = `Not enough in that account for $${amount}. The payment was missed and added to debt.`
         }
 
+        if (patch.holdBill) {
+          delete patch.holdBill
+        } else {
         const bills = state.recurringBills.map((b) =>
           b.id === bill.id
             ? { ...b, nextDueTotalMinutes: Math.max(b.nextDueTotalMinutes, state.totalMinutes) + b.everyDays * MINUTES_PER_DAY }
@@ -1595,6 +1748,7 @@ function createGameStore(): UseGameStore {
             kind: 'bill',
             status: 'missed',
           })
+        }
         }
       }
     }
@@ -1853,24 +2007,7 @@ function createGameStore(): UseGameStore {
       })
       return
     }
-    if (!s.hasJob) {
-      s.openDialogue({
-        name: 'AutoMart kiosk',
-        text: 'Applications need proof of income. Get a job first, then come back.',
-        options: [{ label: 'OK', close: true }],
-      })
-      return
-    }
-    if (!s.creditEstablished || s.creditScore < CAR_CREDIT_MIN) {
-      s.openDialogue({
-        name: 'AutoMart kiosk',
-        text: `Credit score too low (need ${CAR_CREDIT_MIN}+). On-time rent and bills raise it.`,
-        options: [{ label: 'OK', close: true }],
-      })
-      return
-    }
-    get().recordEducation('car-deal')
-    s.openScenario('car-buy-vs-lease')
+    get().play({ type: 'open', activity: { kind: 'car' } })
   },
   openHomeDealScenario: () => {
     const s = get()
@@ -1914,7 +2051,7 @@ export const SCENE_LOCATION: Record<SceneId, string> = {
 
 export function processDueBillsAsScenarios() {
   const s = useGame.getState()
-  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue) return false
+  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue || s.activity) return false
   const billId = s.dueBillIds[0]
   if (!billId) return false
   const bill = s.recurringBills.find((b) => b.id === billId)
@@ -1966,7 +2103,7 @@ export function processDueBillsAsScenarios() {
 
 export function fireRandomExpenseIfDue() {
   const s = useGame.getState()
-  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue) return false
+  if (s.activeScenarioId || s.phoneOpen || s.investingPanelOpen || s.dialogue || s.activity) return false
   if (s.dueBillIds.length > 0) return false // bills take priority
   if (s.totalMinutes < s.nextRandomExpenseAt) return false
   const rentAmount = s.recurringBills.find((b) => b.category === 'rent')?.amount ?? RENT_MONTHLY

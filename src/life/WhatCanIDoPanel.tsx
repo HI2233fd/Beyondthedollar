@@ -1,4 +1,5 @@
 import { useGame } from '../GameState'
+import type { PlayAction } from './play/reduce'
 import { CATEGORY_META } from './optionsEngine'
 import { exitSpawn, BUILDINGS, HOME_BEDROOM_START } from '../cityLayout'
 import { INTERIOR_SPAWN } from '../Interiors/spawns'
@@ -88,7 +89,19 @@ export function WhatCanIDoPanel() {
           {options.map((o) => {
             const meta = CATEGORY_META[o.category]
             return (
-              <button key={o.id} type="button" className="option-row" onClick={() => run(o.action)}>
+              <button
+                key={o.id}
+                type="button"
+                className="option-row"
+                onClick={() => {
+                  if (o.play) {
+                    close()
+                    useGame.getState().play(o.play as PlayAction)
+                    return
+                  }
+                  run(o.action)
+                }}
+              >
                 <span className="option-cat">
                   {meta.icon} {meta.label}
                 </span>

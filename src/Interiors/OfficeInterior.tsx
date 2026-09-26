@@ -20,119 +20,11 @@ function stampLabel(totalMinutes: number) {
   return `${s.weekday} ${s.month}/${s.dayOfMonth} ${s.clockLabel}`
 }
 
-function showResult() {
-  const result = useGame.getState().finishInterview()
-  useGame.setState((s) => ({
-    dialogue: {
-      name: NAME,
-      text: result.message,
-      options: [{ label: result.hired ? 'Thanks — I’ll check my Phone' : 'I’ll try again later', close: true }],
-    },
-    ...(result.hired
-      ? {
-          hasJob: true,
-          career: 'Office Assistant' as const,
-          weeklyIncome: Math.max(s.weeklyIncome, OFFICE_WEEKLY_GROSS),
-        }
-      : {}),
-  }))
-}
-
-function q3(): Dialogue {
-  return {
-    name: NAME,
-    text: 'Last one: A customer is upset about a delayed form. What do you do first?',
-    options: [
-      {
-        label: 'Listen, apologize, then check the status',
-        action: () => {
-          useGame.getState().answerInterview(true)
-          showResult()
-        },
-      },
-      {
-        label: 'Tell them it’s not my department',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          showResult()
-        },
-      },
-      {
-        label: 'Ignore it until they calm down',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          showResult()
-        },
-      },
-    ],
-  }
-}
-
-function q2(): Dialogue {
-  return {
-    name: NAME,
-    text: 'If you’re scheduled 15 hours but a friend invites you to skip a shift, you…',
-    options: [
-      {
-        label: 'Keep the shift — or swap it properly with the manager',
-        action: () => {
-          useGame.getState().answerInterview(true)
-          useGame.setState({ dialogue: q3() })
-        },
-      },
-      {
-        label: 'Just don’t show up',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          useGame.setState({ dialogue: q3() })
-        },
-      },
-      {
-        label: 'Text a coworker at the last minute and hope',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          useGame.setState({ dialogue: q3() })
-        },
-      },
-    ],
-  }
-}
-
-function q1(): Dialogue {
-  return {
-    name: NAME,
-    text: 'Interview time. Question 1: We’re open weekdays after school. Can you commit to those hours?',
-    options: [
-      {
-        label: 'Yes — I can do weekday afternoons',
-        action: () => {
-          useGame.getState().answerInterview(true)
-          useGame.setState({ dialogue: q2() })
-        },
-      },
-      {
-        label: 'Only if I feel like it each week',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          useGame.setState({ dialogue: q2() })
-        },
-      },
-      {
-        label: 'I need every afternoon free for gaming',
-        action: () => {
-          useGame.getState().answerInterview(false)
-          useGame.setState({ dialogue: q2() })
-        },
-      },
-    ],
-  }
-}
-
 function officeDialogue(): Dialogue {
   const g = useGame.getState()
   const leave: DialogueOption = { label: 'Leave', close: true }
 
-  if (g.hasJob) {
+  if (g.hasJob && !g.lifeFacts.usesShiftPay) {
     const weekly = Math.round(g.weeklyIncome * g.incomeFactor)
     const net = Math.round(weekly * (1 - PAYROLL_TAX_RATE))
     const pay = stampLabel(g.nextPaydayAt)
@@ -152,43 +44,64 @@ function officeDialogue(): Dialogue {
     }
   }
 
-  const menu: Dialogue = {
-    name: NAME,
-    text: 'Part-time Office Assistant opening. Requirements: high school diploma, checking for direct deposit, reliable weekday hours. Interview required — we don’t hire on a handshake.',
-    options: [],
+  const facts = g.lifeFacts
+  const worksHere = g.hasJob && facts.employerId === 'summit'
+  const app = facts.apps.summit
+  if (worksHere) {
+    return {
+      name: NAME,
+      text: `You’re on the desk as ${g.career}. Shifts pay from the work you do here, after tax.`,
+      options: [
+        {
+          label: 'Clock in',
+          action: () => {
+            const err = useGame.getState().play({ type: 'open', activity: { kind: 'shift', employerId: 'summit' } })
+            if (err) useGame.getState().openDialogue({ name: NAME, text: err, options: [leave] })
+          },
+        },
+        {
+          label: 'The drawer problem',
+          action: () => useGame.getState().play({ type: 'open', activity: { kind: 'workplace' } }),
+          close: true,
+        },
+        {
+          label: 'Performance review',
+          action: () => useGame.getState().play({ type: 'open', activity: { kind: 'review' } }),
+          close: true,
+        },
+        leave,
+      ],
+    }
   }
 
-  menu.options = [
-    {
-      label: 'Read full requirements',
-      next: {
-        name: NAME,
-        text: 'Must have: (1) HS diploma/GED, (2) checking account for direct deposit, (3) pass a short interview. Experience helps but isn’t required. Wrong answers lower your odds — rejection is real.',
-        options: [{ label: 'Back', next: menu }, leave],
+  return {
+    name: NAME,
+    text: `Office Assistant, $${OFFICE_HOURLY}/hr, about ${OFFICE_HOURS_PER_WEEK} hrs/week. Direct deposit only. Interview is situational — I want to see how you handle a real desk, not a slogan.`,
+    options: [
+      {
+        label: app?.status === 'scheduled' ? 'Start the interview' : app?.status === 'offered' ? 'Talk about the offer' : 'Read the posting',
+        action: () => {
+          const state = useGame.getState()
+          const status = state.lifeFacts.apps.summit?.status
+          if (status === 'scheduled') {
+            const err = state.play({ type: 'open', activity: { kind: 'interview', employerId: 'summit' } })
+            if (err) state.openDialogue({ name: NAME, text: err, options: [leave] })
+          } else {
+            state.play({ type: 'open', activity: { kind: 'posting', employerId: 'summit' } })
+          }
+        },
       },
-    },
-    {
-      label: 'Start application / interview',
-      action: () => {
-        const err = useGame.getState().beginInterview()
-        if (err) {
-          useGame.setState({ dialogue: { name: NAME, text: err, options: [leave] } })
-        } else {
-          useGame.setState({ dialogue: q1() })
-        }
+      {
+        label: 'Ask about pay',
+        next: {
+          name: NAME,
+          text: `$${OFFICE_HOURLY}/hour. A 4-hour shift is taxed at about 18% (around $${NET_EST} is a full week, not one shift). You get paid when you clock out.`,
+          options: [leave],
+        },
       },
-    },
-    {
-      label: 'Ask about pay',
-      next: {
-        name: NAME,
-        text: `$${OFFICE_HOURLY}/hour, ~${OFFICE_HOURS_PER_WEEK} hours/week (~$${OFFICE_WEEKLY_GROSS} gross / ~$${NET_EST} take-home after ~18% tax). First payday is Sept 2 morning. Direct deposit only.`,
-        options: [{ label: 'Back', next: menu }, leave],
-      },
-    },
-    leave,
-  ]
-  return menu
+      leave,
+    ],
+  }
 }
 
 export function OfficeInterior() {
