@@ -17,6 +17,9 @@ import { DialogueSystem } from './DialogueSystem'
 import { InteractionPrompt } from './InteractionSystem'
 import { LifeEventSystem } from './LifeEventSystem'
 import { LessonPanel } from './LessonPanel'
+import { ConceptLessonPanel } from './education/ConceptLessonPanel'
+import { CheckpointPanel } from './education/CheckpointPanel'
+import { ExplainerCard } from './education/ExplainerCard'
 import { QuizPanel } from './QuizPanel'
 import { CurriculumHUD } from './CurriculumHUD'
 import { CityLighting } from './simulation/CityLighting'
@@ -31,6 +34,7 @@ import { GuidePanel } from './life/GuidePanel'
 import { WhatCanIDoPanel, WhatCanIDoFab } from './life/WhatCanIDoPanel'
 import { RewardToast } from './life/RewardToast'
 import { PaceCoach } from './life/PaceCoach'
+import { ActivityPanel } from './life/play/ActivityPanel'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -108,6 +112,7 @@ export function Game() {
   const phoneOpen = useGame((s) => s.phoneOpen)
   const optionsOpen = useGame((s) => s.optionsOpen)
   const rewardPopup = useGame((s) => s.rewardPopup)
+  const activityOpen = useGame((s) => s.activity)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -167,6 +172,7 @@ export function Game() {
     phoneOpen ||
     optionsOpen ||
     !!rewardPopup ||
+    !!activityOpen ||
     !characterCreated
   const showHint = characterCreated && !locked && !modalOpen
 
@@ -208,10 +214,14 @@ export function Game() {
             <CartPanel />
             <DialogueSystem />
             <LessonPanel />
+            <ConceptLessonPanel />
+            <CheckpointPanel />
+            <ExplainerCard />
             <QuizPanel />
             <ScenarioPanel />
             <InvestingPanel />
             <PhonePanel />
+            <ActivityPanel />
             <LifeEventSystem />
             <TimeSystem />
             <LifeLoop />

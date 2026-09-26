@@ -1,3 +1,7 @@
+import type { EducationState } from '../education/types'
+import type { PhoneMessage } from './characterLook'
+import type { LifeFacts } from './play/logic'
+import type { ActivitySession } from './play/reduce'
 import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Skills } from './types'
 import { DEFAULT_APPEARANCE, DEFAULT_SKILLS } from './types'
 
@@ -58,6 +62,15 @@ export interface SaveBlob {
   homeStatus: string
   scene: string
   firstDayStarted: boolean
+  /** Absent on saves from before the financial-mastery backbone. */
+  financialEdu?: EducationState
+  /** Absent on saves from before the life-play overhaul. */
+  lifeFacts?: LifeFacts
+  messages?: PhoneMessage[]
+  guideDismissed?: string[]
+  leftHome?: boolean
+  phoneOpenedOnce?: boolean
+  activity?: ActivitySession | null
 }
 
 export function emptyLifeDefaults() {

@@ -3,37 +3,24 @@ import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Guest, Plant } from '../props'
 import { box } from '../collision'
-import { useGame, type Dialogue } from '../GameState'
+import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { LearningStation } from '../curriculum/LearningStation'
+import { GROCERY_PRODUCTS, type GroceryProduct } from '../life/play/logic'
 
-interface Product {
-  id: string
-  name: string
-  price: number
-  color: string
-}
-
-const PRODUCTS: Product[] = [
-  { id: 'milk', name: 'Milk', price: 3.49, color: '#f8fafc' },
-  { id: 'eggs', name: 'Eggs', price: 2.99, color: '#fde68a' },
-  { id: 'bread', name: 'Bread', price: 3.29, color: '#d9a066' },
-  { id: 'chicken', name: 'Chicken', price: 8.49, color: '#f4c7b0' },
-  { id: 'fruit', name: 'Fruit', price: 4.99, color: '#ef4444' },
-]
-
-function ProductStand({ product, x }: { product: Product; x: number }) {
+function ProductStand({ product, x, z }: { product: GroceryProduct; x: number; z: number }) {
   const addToCart = useGame((s) => s.addToCart)
+  const kind = product.needKey ? 'food' : 'extra'
   useInteractable({
     id: `product-${product.id}`,
     scene: 'grocery',
-    position: [x, 0, 0],
-    radius: 1.9,
-    prompt: `Add ${product.name} ($${product.price.toFixed(2)})`,
-    onInteract: () => addToCart({ id: product.id, name: product.name, price: product.price }),
+    position: [x, 0, z],
+    radius: 1.6,
+    prompt: `Add ${product.name} ($${product.price.toFixed(2)}, ${kind})`,
+    onInteract: () => addToCart({ id: product.id, name: product.name, price: product.price, needKey: product.needKey }),
   })
   return (
-    <group position={[x, 0, -1]}>
+    <group position={[x, 0, z]}>
       {/* product boxes on the shelf */}
       {[1.05, 1.5].map((y) =>
         [-0.4, 0, 0.4].map((ox) => (
@@ -71,14 +58,27 @@ function Checkout() {
         return
       }
       const total = s.cart.reduce((a, i) => a + i.price, 0)
-      const count = s.cart.length
-      s.checkout()
-      const done: Dialogue = {
-        name: 'Cashier — Priya',
-        text: `That’s ${count} item${count > 1 ? 's' : ''} for $${total.toFixed(2)}. Payment received — thanks for shopping at FreshMart! Your cash balance is now $${useGame.getState().cash.toFixed(2)}.`,
-        options: [{ label: 'You’re welcome', close: true }],
+      const pay = (from: 'cash' | 'bank') => {
+        const paid = useGame.getState().checkout(from)
+        const now = useGame.getState()
+        openDialogue({
+          name: 'Cashier — Priya',
+          text:
+            paid < 0
+              ? 'That account cannot cover the cart. Nothing was charged.'
+              : `$${total.toFixed(2)} paid from ${from === 'cash' ? 'cash' : 'checking'}. You have $${now.cash.toFixed(2)} cash and $${now.bank.toFixed(2)} in checking.`,
+          options: [{ label: 'Thanks', close: true }],
+        })
       }
-      openDialogue(done)
+      openDialogue({
+        name: 'Cashier — Priya',
+        text: `Cart is $${total.toFixed(2)}. Cash $${s.cash.toFixed(2)}. Checking $${s.bank.toFixed(2)}. I will not tell you if it is a good basket.`,
+        options: [
+          { label: `Pay cash`, action: () => pay('cash') },
+          { label: 'Pay from checking', action: () => pay('bank') },
+          { label: 'Not yet', close: true },
+        ],
+      })
     },
   })
   return (
@@ -179,8 +179,8 @@ export function GroceryInterior() {
       <Plant position={[6.8, 0, -5]} />
 
       {/* Product stands (front shelf) */}
-      {PRODUCTS.map((p, i) => (
-        <ProductStand key={p.id} product={p} x={-6 + i * 3} />
+      {GROCERY_PRODUCTS.map((p, i) => (
+        <ProductStand key={p.id} product={p} x={-6 + (i % 6) * 2.4} z={i < 6 ? -1 : -4.2} />
       ))}
 
       {/* Shoppers */}
@@ -201,9 +201,107 @@ export function GroceryInterior() {
         skin="#c68642"
         getDialogue={() => ({
           name: 'Cashier — Priya',
-          text: 'Hi! Add items from the shelves, then step up to the register to check out.',
+          text: 'Shelves are labeled. Food and extras are mixed together. Pay at the register when you are done — cash or checking.',
           options: [{ label: 'Thanks', close: true }],
         })}
+      />
+      <NPC
+        id="grocery-maya"
+        scene="grocery"
+        position={[2.2, 0, 0.6]}
+        rotation={Math.PI * 0.2}
+        name="Maya"
+        shirt="#f97316"
+        pants="#44403c"
+        hair="#3b2f2f"
+        getDialogue={() => {
+          const helped = useGame.getState().lifeFacts.helpedMaya
+          if (helped === 'none') {
+            return {
+              name: 'Maya',
+              text: 'Hey — I have $24 and I keep grabbing juice. Can you help me fill a basket I can actually cook from?',
+              options: [
+                {
+                  label: 'Help with the basket',
+                  action: () => useGame.getState().play({ type: 'open', activity: { kind: 'maya' } }),
+                  close: true,
+                },
+                { label: 'Not right now', close: true },
+              ],
+            }
+          }
+          return {
+            name: 'Maya',
+            text:
+              helped === 'well'
+                ? 'You actually left me with food. I told my manager about you.'
+                : 'Thanks for trying. I still had to come back for something I needed.',
+            options: [
+              {
+                label: 'About that introduction',
+                action: () => useGame.getState().play({ type: 'open', activity: { kind: 'maya-intro' } }),
+                close: true,
+              },
+              { label: 'See you', close: true },
+            ],
+          }
+        }}
+      />
+      <NPC
+        id="grocery-andre"
+        scene="grocery"
+        position={[5.2, 0, -1.2]}
+        rotation={-0.6}
+        name="Andre"
+        shirt="#0f766e"
+        pants="#1f2937"
+        getDialogue={() => {
+          const facts = useGame.getState().lifeFacts
+          const open = facts.apps.freshmart || facts.mayaBonus || Object.values(facts.apps).some((a) => a?.status === 'rejected')
+          if (!open) {
+            return {
+              name: 'Andre',
+              text: 'Weekend freight is covered for now. If that changes, Maya usually hears first.',
+              options: [{ label: 'Good to know', close: true }],
+            }
+          }
+          const works = facts.employerId === 'freshmart'
+          if (works) {
+            return {
+              name: 'Andre',
+              text: 'You are on the weekend crew. Clock in when you are ready to stock.',
+              options: [
+                {
+                  label: 'Clock in',
+                  action: () => {
+                    const err = useGame.getState().play({ type: 'open', activity: { kind: 'shift', employerId: 'freshmart' } })
+                    if (err) useGame.getState().openDialogue({ name: 'Andre', text: err, options: [{ label: 'OK', close: true }] })
+                  },
+                },
+                { label: 'Later', close: true },
+              ],
+            }
+          }
+          return {
+            name: 'Andre',
+            text: 'I can use a stocker. The pay is lower than the café. The interview is the work, not a slogan.',
+            options: [
+              {
+                label: 'Talk about the job',
+                action: () => useGame.getState().play({ type: 'open', activity: { kind: 'posting', employerId: 'freshmart' } }),
+                close: true,
+              },
+              {
+                label: 'Interview now',
+                action: () => {
+                  const err = useGame.getState().play({ type: 'open', activity: { kind: 'interview', employerId: 'freshmart' } })
+                  if (err) useGame.getState().openDialogue({ name: 'Andre', text: err, options: [{ label: 'OK', close: true }] })
+                },
+              },
+              { label: 'Not today', close: true },
+            ],
+          }
+        }}
       />
 
 

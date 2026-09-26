@@ -483,6 +483,17 @@ canvas {
   padding: 8px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
+button.phone-row.life-concept {
+  width: 100%;
+  background: transparent;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
 .phone-row-total {
   font-weight: 800;
   border-bottom: none;
@@ -1434,6 +1445,18 @@ button.curriculum-hud:hover {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.explainer-card {
+  bottom: 268px;
+  z-index: 16;
+  width: min(420px, calc(100vw - 188px));
+  max-height: min(280px, calc(100vh - 360px));
+  overflow: auto;
+}
+.explainer-card p {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
 .coach-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .soft-go {
   flex: 1;
@@ -1809,8 +1832,58 @@ button.curriculum-hud:hover {
     transform: none;
     bottom: 92px;
   }
+  .explainer-card {
+    bottom: 250px;
+    width: auto;
+  }
   .controls-hint {
     display: none;
   }
   .interact-prompt { bottom: 210px; }
 }
+
+.activity-card {
+  width: min(760px, 96vw);
+  max-height: min(86vh, 820px);
+  overflow: auto;
+  background: linear-gradient(180deg, #182234, #0e1524);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 22px;
+  color: var(--text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.activity-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.activity-top h2 { margin: 6px 0 0; font-size: 1.35rem; }
+.activity-lead, .activity-note { color: var(--muted); line-height: 1.5; }
+.activity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 12px 0; }
+.choice-card, .shift-options button, .activity-questions button {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.choice-card.selected, .shift-options button.selected { border-color: #38bdf8; background: rgba(56, 189, 248, 0.12); }
+.choice-card span, .activity-facts { color: var(--muted); font-size: 0.86rem; }
+.activity-facts { margin: 8px 0 12px; padding-left: 18px; }
+.activity-questions, .activity-actions, .shift-options { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.activity-field { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; font-size: 0.9rem; }
+.activity-field input {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.activity-error { color: #fca5a5; }
+.shift-field { margin: 10px 0; }
+.life-summary { margin-bottom: 12px; }
+.life-opp { width: 100%; cursor: pointer; text-align: left; background: transparent; color: inherit; border: 0; }
+.coach-quiet { opacity: 0.92; }
+.mission-tracker { max-height: 46vh; overflow: auto; }

@@ -12,6 +12,8 @@ import {
 } from './progression'
 import { DOWNTOWN_UNLOCK_LEVEL, LIFE_GOALS, SKILL_LABELS, type SkillId } from '../life/types'
 import { ACHIEVEMENT_DEFS } from '../life/missions'
+import { LifePhone } from '../education/LifePhone'
+import { LifeSummary } from '../life/play/LifeSummary'
 
 const money = (n: number) =>
   `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -31,6 +33,7 @@ type AppId =
   | 'bank'
   | 'invest'
   | 'skills'
+  | 'life'
   | 'map'
   | 'news'
   | 'achievements'
@@ -45,6 +48,7 @@ const APPS: { id: AppId; label: string; icon: string }[] = [
   { id: 'bank', label: 'Bank', icon: '🏦' },
   { id: 'invest', label: 'Invest', icon: '📈' },
   { id: 'skills', label: 'Skills', icon: '🧠' },
+  { id: 'life', label: 'Life', icon: '🌱' },
   { id: 'map', label: 'Map', icon: '🗺️' },
   { id: 'news', label: 'News', icon: '📰' },
   { id: 'achievements', label: 'Wins', icon: '🏆' },
@@ -75,7 +79,6 @@ export function PhonePanel() {
   const education = useGame((s) => s.education)
   const weeklyIncome = useGame((s) => s.weeklyIncome)
   const incomeFactor = useGame((s) => s.incomeFactor)
-  const nextPaydayAt = useGame((s) => s.nextPaydayAt)
   const incomeFactorUntil = useGame((s) => s.incomeFactorUntil)
   const name = useGame((s) => s.playerName)
   const age = useGame((s) => s.playerAge)
@@ -161,6 +164,7 @@ export function PhonePanel() {
 
         {app === 'home' && (
           <div className="phone-body">
+            <LifeSummary />
             <div className={`phone-hero ${hasJob ? 'phone-hero-ok' : ''}`}>
               <span className="hud-label">
                 {name || 'You'} · Age {age} · Lv {lifeLevel}
@@ -170,8 +174,8 @@ export function PhonePanel() {
               </strong>
               <p className="phone-hero-sub">
                 {hasJob
-                  ? `${career} · ~${money(effectiveWeekly)}/wk · payday ${fmtWhen(nextPaydayAt)}`
-                  : 'Open checking, then interview Diane at Summit.'}
+                  ? `${career} · paid when you work a shift`
+                  : 'No single assignment. See Your Life above.'}
               </p>
             </div>
             <div className="phone-grid">
@@ -319,7 +323,7 @@ export function PhonePanel() {
               <p className="phone-hero-sub">
                 {hasJob
                   ? `Gross ~${money(effectiveWeekly)}/wk before ~18% tax withholding`
-                  : 'Summit Office · Office Assistant entry role'}
+                  : 'Bean Street, Summit, and sometimes FreshMart are hiring. Read the posting before you apply.'}
               </p>
             </div>
             {paystubs.length > 0 && (
@@ -445,6 +449,8 @@ export function PhonePanel() {
             )}
           </div>
         )}
+
+        {app === 'life' && <LifePhone />}
 
         {app === 'skills' && (
           <div className="phone-body">

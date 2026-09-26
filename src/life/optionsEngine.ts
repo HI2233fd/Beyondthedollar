@@ -1,5 +1,5 @@
 import type { ActivityOption } from './characterLook'
-import { DOWNTOWN_UNLOCK_LEVEL, LIFE_GOALS, type LifeGoalId } from './types'
+import { DOWNTOWN_UNLOCK_LEVEL, LIFE_GOALS, missionStatus, type LifeGoalId } from './types'
 import type { Mission } from './types'
 
 export interface OptionContext {
@@ -24,21 +24,29 @@ export interface OptionContext {
   unreadMessages: number
 }
 
-/** Continuously surfaces ~4–6 compelling options from player state. Never empty when character exists. */
+/** Surfaces several real opportunities. It does not collapse life into one next step. */
 export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
   const options: ActivityOption[] = []
-  const activeMain = ctx.missions.find((m) => !m.completed && (m.category === 'main' || m.id === 'first-day'))
-  const activeOpp = ctx.missions.find((m) => !m.completed && m.category === 'opportunity')
+  const openMissions = ctx.missions.filter((m) => {
+    const status = missionStatus(m)
+    return status === 'active' || status === 'accepted' || status === 'discovered'
+  })
+  for (const mission of openMissions) {
+    options.push(optionFromMission(mission))
+  }
 
-  if (activeMain) {
-    const next = activeMain.objectives.find((o) => !o.done)
+  const legacyMain = ctx.missions.find((m) => !m.completed && m.id === 'first-day')
+  const activeOpp = ctx.missions.find((m) => !m.completed && m.id === 'first-opportunity')
+
+  if (legacyMain) {
+    const next = legacyMain.objectives.find((o) => !o.done)
     options.push({
-      id: `main-${activeMain.id}`,
+      id: `main-${legacyMain.id}`,
       category: 'main',
-      title: next ? next.label : activeMain.title,
-      reason: activeMain.description,
-      locationHint: activeMain.locationHint,
-      personHint: activeMain.personHint,
+      title: next ? next.label : legacyMain.title,
+      reason: legacyMain.description,
+      locationHint: legacyMain.locationHint,
+      personHint: legacyMain.personHint,
       priority: 100,
       action: next?.id === 'open-phone' ? 'phone' : next?.id === 'leave-home' ? 'goto-city' : next?.id === 'meet-someone' ? 'talk-jordan' : 'goto-home',
     })
@@ -255,7 +263,59 @@ export function computeActivityOptions(ctx: OptionContext): ActivityOption[] {
       return true
     })
     .sort((a, b) => b.priority - a.priority)
-    .slice(0, 6)
+    .slice(0, 8)
+}
+
+function optionFromMission(mission: Mission): ActivityOption {
+  const status = missionStatus(mission)
+  const next = mission.objectives.find((o) => !o.done)
+  const category: ActivityOption['category'] =
+    mission.category === 'career'
+      ? 'career'
+      : mission.category === 'financial'
+        ? 'money'
+        : mission.category === 'side'
+          ? 'social'
+          : mission.category === 'event'
+            ? 'event'
+            : mission.category === 'opportunity'
+              ? 'discover'
+              : 'main'
+  const play = playForMission(mission.id)
+  return {
+    id: `mission-${mission.id}`,
+    category,
+    title: mission.title,
+    reason: status === 'discovered' ? mission.description : next?.label ?? mission.description,
+    locationHint: mission.locationHint,
+    personHint: mission.personHint,
+    priority: status === 'active' || status === 'accepted' ? 70 : 62,
+    action: play ? undefined : fallbackAction(mission.id),
+    play,
+  }
+}
+
+function playForMission(id: string): ActivityOption['play'] | undefined {
+  if (id === 'bank-first') return { type: 'open', activity: { kind: 'bank' } }
+  if (id === 'job-bean') return { type: 'open', activity: { kind: 'posting', employerId: 'bean' } }
+  if (id === 'job-summit') return { type: 'open', activity: { kind: 'posting', employerId: 'summit' } }
+  if (id === 'job-freshmart') return { type: 'open', activity: { kind: 'posting', employerId: 'freshmart' } }
+  if (id === 'phone-deal') return { type: 'open', activity: { kind: 'phone' } }
+  if (id === 'payday-split') return { type: 'open', activity: { kind: 'split' } }
+  if (id === 'workplace-snag') return { type: 'open', activity: { kind: 'workplace' } }
+  if (id === 'performance-review') return { type: 'open', activity: { kind: 'review' } }
+  if (id === 'maya-intro') return { type: 'open', activity: { kind: 'maya-intro' } }
+  if (id === 'wheels') return { type: 'open', activity: { kind: 'car' } }
+  if (id === 'fix-car') return { type: 'open', activity: { kind: 'repair' } }
+  if (id === 'job-recovery') return { type: 'open', activity: { kind: 'practice' } }
+  return undefined
+}
+
+function fallbackAction(id: string): ActivityOption['action'] {
+  if (id === 'maya-help' || id === 'week-groceries') return 'goto-grocery'
+  if (id === 'settle-in') return 'goto-city'
+  if (id === 'rent-clock') return 'phone'
+  return 'phone'
 }
 
 function progressTowardGoal(goal: LifeGoalId, ctx: OptionContext): string {
