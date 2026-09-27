@@ -24,11 +24,13 @@ export function initControls() {
       const g = useGame.getState()
       if (g.optionsOpen) g.closeOptions()
       else if (g.rewardPopup) g.clearRewardPopup()
+      else if (g.classSessionOpen) g.closeClassSession()
       else if (g.phoneOpen) g.closePhone()
       else if (g.investingPanelOpen) g.closeInvestingPanel()
       else if (g.activeScenarioId) g.dismissScenario()
       else if (g.activeQuizId) g.closeQuiz()
       else if (g.activeLessonId) g.closeLesson()
+      else if (g.dayLife?.sittingId) g.dayAct({ type: 'sit', seatId: null })
       else g.closeDialogue()
     }
   })
@@ -65,6 +67,9 @@ export function movementLocked(): boolean {
     s.optionsOpen ||
     !!s.rewardPopup ||
     !!s.activity ||
+    !!s.classSessionOpen ||
+    !!s.dayLife?.drivingVehicleId ||
+    !!s.dayLife?.sittingId ||
     !s.characterCreated
   )
 }

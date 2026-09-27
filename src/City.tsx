@@ -39,7 +39,7 @@ function HelpWanted() {
   useInteractable({
     id: 'bean-board',
     scene: 'city',
-    position: [-18, 0, 10],
+    position: [-18, 0, 7.2],
     radius: 2.4,
     prompt: 'Bean Street Café — Help Wanted',
     onInteract: () => {
@@ -54,8 +54,7 @@ function HelpWanted() {
           s.play({ type: 'open', activity: { kind: 'review' } })
           return
         }
-        const err = s.play({ type: 'open', activity: { kind: 'shift', employerId: 'bean' } })
-        if (err) s.openDialogue({ name: 'Bean Street', text: err, options: [{ label: 'OK', close: true }] })
+        s.enterScene('cafe', { pos: [0, 0, 2.2], yaw: Math.PI })
         return
       }
       if (app?.status === 'scheduled') {
@@ -67,7 +66,7 @@ function HelpWanted() {
     },
   })
   return (
-    <group position={[-18, 0, 10]}>
+    <group position={[-18, 0, 7.2]}>
       <mesh position={[0, 1.3, 0]} castShadow>
         <boxGeometry args={[0.12, 2.4, 0.12]} />
         <meshStandardMaterial color="#44403c" />

@@ -77,7 +77,7 @@ export const EMPLOYERS: Record<EmployerId, Employer> = {
     hourly: 14.5,
     hoursPerWeek: 16,
     needsChecking: false,
-    where: 'Help Wanted board, west sidewalk',
+    where: 'Bean Street Café interior',
     conceptIds: ['get-hired', 'human-capital', 'paycheck-story'],
   },
   summit: {

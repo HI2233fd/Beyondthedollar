@@ -100,7 +100,7 @@ try {
 }
 check('cannot clock in from home', shiftError.includes('Clock in'), shiftError)
 
-s = apply({ ...s, scene: 'city' }, { type: 'shift', employerId: 'bean', accuracy: 1 })
+s = apply({ ...s, scene: 'cafe' }, { type: 'shift', employerId: 'bean', accuracy: 1 })
 check('paycheck exists', s.paystubs.length === 1 && s.paystubs[0].net > 0, String(s.paystubs[0]?.net))
 check('paid into checking', s.bank > 200, String(s.bank))
 check('tax withheld', s.paystubs[0].tax > 0 && s.paystubs[0].net < s.paystubs[0].gross)

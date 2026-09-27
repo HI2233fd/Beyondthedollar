@@ -2,6 +2,7 @@ import type { EducationState } from '../education/types'
 import type { PhoneMessage } from './characterLook'
 import type { LifeFacts } from './play/logic'
 import type { ActivitySession } from './play/reduce'
+import type { DayLife } from './day/types'
 import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Skills } from './types'
 import { DEFAULT_APPEARANCE, DEFAULT_SKILLS } from './types'
 
@@ -66,6 +67,8 @@ export interface SaveBlob {
   financialEdu?: EducationState
   /** Absent on saves from before the life-play overhaul. */
   lifeFacts?: LifeFacts
+  /** Absent on saves from before the living-world day loop. */
+  dayLife?: DayLife
   messages?: PhoneMessage[]
   guideDismissed?: string[]
   leftHome?: boolean
@@ -97,6 +100,26 @@ export function emptyLifeDefaults() {
     rewardPopup: null as import('./characterLook').RewardPopup | null,
     messages: [] as { id: string; from: string; body: string; atTotalMinutes: number; read: boolean; opportunityId?: string }[],
     goalMilestones: [] as { id: string; goalId: LifeGoalId; label: string; done: boolean }[],
+    dayLife: {
+      hunger: 55,
+      energy: 78,
+      pantry: [],
+      outfits: [],
+      wearing: 'starter',
+      vehicles: [],
+      drivingVehicleId: null,
+      sittingId: null,
+      schoolSeated: false,
+      handRaised: false,
+      classParticipation: 0,
+      periodsAttended: [],
+      lunchEatenToday: false,
+      lastAteAt: 0,
+      lastSleptAt: 0,
+      friendsMet: [],
+      dayIndexSeen: 0,
+    } as DayLife,
+    classSessionOpen: false as boolean,
   }
 }
 

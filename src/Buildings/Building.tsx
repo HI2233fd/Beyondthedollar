@@ -7,7 +7,7 @@ import { buildingHasActiveCurriculum } from '../curriculum'
 import type { BuildingId } from '../curriculum/types'
 
 export function Building({ def }: { def: BuildingDef }) {
-  const enterScene = useGame((s) => s.enterScene)
+  const tryEnter = useGame((s) => s.tryEnterBusiness)
   const unlocked = useGame((s) => s.unlockedUnitNumber)
   const completed = useGame((s) => s.completedTopicIds)
   const learnHere =
@@ -187,7 +187,13 @@ export function Building({ def }: { def: BuildingDef }) {
       {def.enterable && def.scene && (
         <DoorTrigger
           def={def}
-          onEnter={() => enterScene(def.scene!, INTERIOR_SPAWN[def.scene as keyof typeof INTERIOR_SPAWN])}
+          onEnter={() =>
+            tryEnter(
+              def.scene!,
+              INTERIOR_SPAWN[def.scene as keyof typeof INTERIOR_SPAWN],
+              def.id === 'cafe' ? 'cafe' : def.id === 'college' ? 'college' : (def.scene as 'bank' | 'grocery' | 'office' | 'cafe' | 'college'),
+            )
+          }
         />
       )}
     </group>

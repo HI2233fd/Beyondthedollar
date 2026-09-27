@@ -7,7 +7,7 @@ export const EPOCH_WEEKDAY = 0 // Mon=0 … Sun=6
 export const EPOCH_MONTH = 9
 export const EPOCH_DAY = 1
 export const EPOCH_YEAR = 1
-export const START_TOTAL_MINUTES = 8 * 60 // 08:00 on day 0
+export const START_TOTAL_MINUTES = 7 * 60 // 07:00 on day 0 — morning routine before school
 
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 export type Weekday = (typeof WEEKDAYS)[number]

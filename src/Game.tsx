@@ -35,6 +35,11 @@ import { WhatCanIDoPanel, WhatCanIDoFab } from './life/WhatCanIDoPanel'
 import { RewardToast } from './life/RewardToast'
 import { PaceCoach } from './life/PaceCoach'
 import { ActivityPanel } from './life/play/ActivityPanel'
+import { DayHud } from './life/day/DayHud'
+import { ClassSessionPanel } from './life/day/ClassSessionPanel'
+import { VehicleSystem } from './life/day/VehicleSystem'
+import { LivingCrowd } from './life/day/LivingCrowd'
+import { CafeInterior } from './life/day/CafeInterior'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -49,6 +54,13 @@ function SceneContent() {
       {scene === 'college' && <CollegeInterior />}
       {scene === 'office' && <OfficeInterior />}
       {scene === 'home' && <HomeInterior />}
+      {scene === 'cafe' && <CafeInterior />}
+      {scene === 'city' && (
+        <>
+          <VehicleSystem />
+          <LivingCrowd />
+        </>
+      )}
     </>
   )
 }
@@ -113,6 +125,7 @@ export function Game() {
   const optionsOpen = useGame((s) => s.optionsOpen)
   const rewardPopup = useGame((s) => s.rewardPopup)
   const activityOpen = useGame((s) => s.activity)
+  const classOpen = useGame((s) => s.classSessionOpen)
   const finishTransition = useGame((s) => s.finishTransition)
 
   const [fade, setFade] = useState(false)
@@ -173,6 +186,7 @@ export function Game() {
     optionsOpen ||
     !!rewardPopup ||
     !!activityOpen ||
+    classOpen ||
     !characterCreated
   const showHint = characterCreated && !locked && !modalOpen
 
@@ -201,6 +215,7 @@ export function Game() {
           <>
             <div className="hud-column">
               <GameHUD />
+              <DayHud />
               <CurriculumHUD />
             </div>
             <Minimap />
@@ -222,6 +237,7 @@ export function Game() {
             <InvestingPanel />
             <PhonePanel />
             <ActivityPanel />
+            <ClassSessionPanel />
             <LifeEventSystem />
             <TimeSystem />
             <LifeLoop />

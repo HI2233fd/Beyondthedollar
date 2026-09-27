@@ -1887,3 +1887,36 @@ button.curriculum-hud:hover {
 .life-opp { width: 100%; cursor: pointer; text-align: left; background: transparent; color: inherit; border: 0; }
 .coach-quiet { opacity: 0.92; }
 .mission-tracker { max-height: 46vh; overflow: auto; }
+
+.day-hud {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: rgba(8, 14, 24, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 12px;
+  min-width: 220px;
+  backdrop-filter: blur(8px);
+}
+.day-hud-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.day-chip {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #bae6fd;
+}
+.day-chip-drive { background: rgba(251, 191, 36, 0.2); color: #fde68a; }
+.day-meters { display: grid; gap: 6px; }
+.day-meters label { display: grid; gap: 3px; font-size: 0.75rem; color: #94a3b8; }
+.day-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  overflow: hidden;
+}
+.day-bar > div { height: 100%; background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.day-bar.energy > div { background: linear-gradient(90deg, #22c55e, #86efac); }
+.day-hud-meta { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.72rem; color: #cbd5e1; }
+.class-card { max-width: 520px; }

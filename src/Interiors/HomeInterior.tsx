@@ -6,7 +6,7 @@ import { KioskStation } from '../simulation/KioskStation'
 import { useGame, type Dialogue } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { LIFE_GOALS } from '../life/types'
-import { nextMorning } from '../life/play/logic'
+import { OUTFIT_CATALOG } from '../life/day/types'
 
 function BedRest() {
   useInteractable({
@@ -14,13 +14,163 @@ function BedRest() {
     scene: 'home',
     position: [-4.4, 0, -3],
     radius: 2.2,
-    prompt: 'Sleep until morning',
+    prompt: 'Sleep until 7:00',
+    onInteract: () => {
+      const err = useGame.getState().dayAct({ type: 'sleep' })
+      if (err) useGame.getState().openDialogue({ name: 'Apartment', text: err, options: [{ label: 'OK', close: true }] })
+    },
+  })
+  return null
+}
+
+function Fridge() {
+  useInteractable({
+    id: 'home-fridge',
+    scene: 'home',
+    position: [5.2, 0, 1.5],
+    radius: 2,
+    prompt: 'Open fridge',
     onInteract: () => {
       const s = useGame.getState()
-      const err = s.play({ type: 'wait', until: nextMorning(s.totalMinutes) })
-      if (err) {
-        s.openDialogue({ name: 'Apartment', text: err, options: [{ label: 'OK', close: true }] })
+      const pantry = s.dayLife.pantry
+      if (!pantry.length) {
+        s.openDialogue({
+          name: 'Fridge',
+          text: 'Empty. Buy groceries at FreshMart and they show up here.',
+          options: [{ label: 'Close', close: true }],
+        })
+        return
       }
+      s.openDialogue({
+        name: 'Fridge',
+        text: 'What do you want to eat?',
+        options: [
+          ...pantry.slice(0, 5).map((f) => ({
+            label: `Eat ${f.label}`,
+            action: () => useGame.getState().dayAct({ type: 'eat', foodId: f.id }),
+            close: true as const,
+          })),
+          { label: 'Close', close: true as const },
+        ],
+      })
+    },
+  })
+  return null
+}
+
+function Closet() {
+  useInteractable({
+    id: 'home-closet',
+    scene: 'home',
+    position: [-5.8, 0, -0.8],
+    radius: 2,
+    prompt: 'Change clothes',
+    onInteract: () => {
+      const s = useGame.getState()
+      const owned = s.dayLife.outfits
+      s.openDialogue({
+        name: 'Closet',
+        text: 'Pick something to wear. Outfits you buy downtown show up here.',
+        options: [
+          ...owned.map((o) => ({
+            label: o.id === s.dayLife.wearing ? `${o.label} (wearing)` : `Wear ${o.label}`,
+            action: () => useGame.getState().dayAct({ type: 'change-outfit', outfitId: o.id }),
+            close: true as const,
+          })),
+          {
+            label: 'Buy a casual set later at the café district ($45)',
+            action: () => {
+              const g = useGame.getState()
+              if (g.dayLife.outfits.some((o) => o.id === 'casual')) {
+                g.openDialogue({ name: 'Closet', text: 'You already own casual clothes.', options: [{ label: 'OK', close: true }] })
+                return
+              }
+              if (g.cash < 45) {
+                g.openDialogue({ name: 'Closet', text: 'Need $45 cash — earn a shift or skip something else.', options: [{ label: 'OK', close: true }] })
+                return
+              }
+              useGame.setState({ cash: Math.round((g.cash - 45) * 100) / 100 })
+              g.dayAct({ type: 'unlock-outfit', outfitId: 'casual' })
+              g.dayAct({ type: 'change-outfit', outfitId: 'casual' })
+            },
+            close: true as const,
+          },
+          { label: 'Close', close: true as const },
+        ],
+      })
+    },
+  })
+  return null
+}
+
+function Couch() {
+  useInteractable({
+    id: 'home-couch',
+    scene: 'home',
+    position: [2.4, 0, -3.5],
+    radius: 2.2,
+    prompt: 'Sit on the couch',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (s.dayLife.sittingId === 'couch') {
+        s.dayAct({ type: 'sit', seatId: null })
+        return
+      }
+      s.dayAct({ type: 'sit', seatId: 'couch' })
+      s.advanceTime(15)
+      s.dayAct({ type: 'tick-needs', deltaMinutes: 0 })
+      useGame.setState({
+        dayLife: { ...useGame.getState().dayLife, energy: Math.min(100, useGame.getState().dayLife.energy + 6) },
+      })
+      s.openDialogue({
+        name: 'Couch',
+        text: 'You sit and scroll. Energy ticks up a little. Phone is still P.',
+        options: [{ label: 'Stand', close: true }],
+      })
+    },
+  })
+  return null
+}
+
+function DeskComputer() {
+  useInteractable({
+    id: 'home-computer',
+    scene: 'home',
+    position: [-2.2, 0, -1.4],
+    radius: 1.8,
+    prompt: 'Use computer',
+    onInteract: () => {
+      useGame.getState().openDialogue({
+        name: 'Laptop',
+        text: 'Banking, job boards, and class notes live here later. For now: open your phone (P) for accounts and opportunities, or the housing tablet for rent decisions.',
+        options: [
+          { label: 'Open phone', action: () => useGame.getState().openPhone(), close: true },
+          { label: 'Close lid', close: true },
+        ],
+      })
+      useGame.getState().advanceTime(5)
+    },
+  })
+  return null
+}
+
+function MailSlot() {
+  useInteractable({
+    id: 'home-mail',
+    scene: 'home',
+    position: [0.2, 0, 5],
+    radius: 1.8,
+    prompt: 'Check mail',
+    onInteract: () => {
+      const s = useGame.getState()
+      const rent = s.recurringBills.find((b) => b.category === 'rent')
+      s.openDialogue({
+        name: 'Mail',
+        text: rent
+          ? `Maple reminder: $${rent.amount} rent is on the calendar. Bills clear on your phone when they are due.`
+          : 'Nothing waiting.',
+        options: [{ label: 'OK', close: true }],
+      })
     },
   })
   return null
@@ -43,9 +193,9 @@ function homeDialogue(): Dialogue {
 
   const intro =
     tier === 'stranger'
-      ? `Hey${s.playerName ? `, ${s.playerName}` : ''}! First day energy. Your room’s that way — then hit the streets.`
+      ? `Hey${s.playerName ? `, ${s.playerName}` : ''}! Fridge has food, closet has clothes, bed is sleep. Campus opens for first period — do not skip breakfast if you can help it.`
       : tier === 'acquaintance'
-        ? `Good to see you again. ${goal ? `Still chasing ${goal.label}?` : 'How’s the money stuff going?'}`
+        ? `Morning. ${goal ? `Still chasing ${goal.label}?` : 'How’s the money stuff going?'}`
         : `You’re basically family at this point. I’ve got your back on the next step.`
 
   const facts = s.lifeFacts
@@ -71,36 +221,34 @@ function homeDialogue(): Dialogue {
     })
   }
   options.push({
-    label: 'What’s going on out there?',
+    label: 'What’s the day look like?',
     next: {
       name: 'Roommate — Jordan',
-      text: goal
-        ? `You said you care about ${goal.label}. That does not pick your day for you. The phone has the live list — bank, work, food, Maya.`
-        : 'Check your phone. A few things are open. I am not going to walk you to one of them.',
-      options: [{ label: 'Fair', close: true }],
+      text: 'School in the morning if it is a weekday. Lunch with people who actually talk. After dismissal — work, shop, or drive if you ever buy a car. Sleep here when you are done.',
+      options: [{ label: 'Got it', close: true }],
     },
   })
   options.push({ label: 'Later', close: true })
 
-  return {
-    name: 'Roommate — Jordan',
-    text: intro,
-    options,
-  }
+  return { name: 'Roommate — Jordan', text: intro, options }
 }
 
-/** Starter home — bedroom + living room with car/home kiosks. */
+/** Starter home — bedroom + living room with usable furniture. */
 export function HomeInterior() {
   return (
     <Room w={14} d={12} floor="#d6cfc4" wall="#f3efe8">
       <BedRest />
-      {/* —— Bedroom (west side) —— */}
+      <Fridge />
+      <Closet />
+      <Couch />
+      <DeskComputer />
+      <MailSlot />
+
       <group position={[-3.8, 0, -2.2]}>
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <planeGeometry args={[5.2, 4.4]} />
           <meshStandardMaterial color="#c4b5a0" />
         </mesh>
-        {/* Bed */}
         <mesh position={[-0.6, 0.35, -0.8]} castShadow>
           <boxGeometry args={[2.2, 0.35, 2.8]} />
           <meshStandardMaterial color="#5b7c99" roughness={0.7} />
@@ -109,55 +257,22 @@ export function HomeInterior() {
           <boxGeometry args={[2.2, 0.35, 0.55]} />
           <meshStandardMaterial color="#e8eef5" />
         </mesh>
-        <mesh position={[-0.6, 0.55, -0.5]} castShadow>
-          <boxGeometry args={[2.0, 0.12, 1.6]} />
-          <meshStandardMaterial color="#93c5fd" />
-        </mesh>
-        {/* Desk + lamp */}
         <mesh position={[1.6, 0.55, 0.6]} castShadow>
           <boxGeometry args={[1.4, 0.08, 0.7]} />
           <meshStandardMaterial color="#7c5a3a" />
         </mesh>
-        <mesh position={[1.1, 0.28, 0.6]} castShadow>
-          <boxGeometry args={[0.08, 0.55, 0.08]} />
-          <meshStandardMaterial color="#5c4030" />
-        </mesh>
-        <mesh position={[2.1, 0.28, 0.6]} castShadow>
-          <boxGeometry args={[0.08, 0.55, 0.08]} />
-          <meshStandardMaterial color="#5c4030" />
-        </mesh>
-        <mesh position={[1.9, 0.95, 0.4]} castShadow>
-          <cylinderGeometry args={[0.06, 0.08, 0.4, 8]} />
-          <meshStandardMaterial color="#d6d3d1" />
-        </mesh>
-        <mesh position={[1.9, 1.2, 0.4]}>
-          <sphereGeometry args={[0.14, 12, 12]} />
-          <meshStandardMaterial color="#fef3c7" emissive="#fde68a" emissiveIntensity={0.5} />
-        </mesh>
-        <pointLight position={[1.9, 1.25, 0.4]} intensity={5} distance={6} color="#fff4d6" />
-        {/* Closet / dresser */}
         <mesh position={[-2.0, 0.85, 1.4]} castShadow>
           <boxGeometry args={[1.3, 1.7, 0.55]} />
           <meshStandardMaterial color="#6b5344" />
         </mesh>
-        <mesh position={[0.2, 1.4, -2.0]} castShadow>
-          <boxGeometry args={[1.8, 1.2, 0.12]} />
-          <meshStandardMaterial color="#7dd3fc" transparent opacity={0.35} />
-        </mesh>
       </group>
 
-      {/* Living room */}
       <Rug position={[2.2, 0.02, 1.2]} size={[5.5, 4]} color="#b08968" />
-      <Rug position={[-3.6, 0.02, 3.6]} size={[2.4, 1.8]} color="#a8b5c4" />
       <WallClock position={[2.2, 3.2, -5.8]} />
       <Plant position={[-5.5, 0, 4]} />
-      <Plant position={[5.2, 0, 3.5]} />
-      <Plant position={[5.4, 0, -4.2]} scale={0.7} />
       <Chair position={[0.4, 0, -0.8]} rotation={0.4} />
       <Chair position={[3.8, 0, -0.4]} rotation={-0.3} />
-      <Chair position={[1.2, 0, 2.4]} rotation={2.4} color="#57534e" />
 
-      {/* Sofa */}
       <mesh position={[2.4, 0.45, -3.8]} castShadow>
         <boxGeometry args={[4.2, 0.9, 1.4]} />
         <meshStandardMaterial color="#6b7c8f" />
@@ -166,22 +281,7 @@ export function HomeInterior() {
         <boxGeometry args={[4.2, 0.7, 0.35]} />
         <meshStandardMaterial color="#5a6b7d" />
       </mesh>
-      {/* Coffee table + lamp */}
-      <mesh position={[2.4, 0.28, -1.8]} castShadow>
-        <boxGeometry args={[1.6, 0.12, 0.8]} />
-        <meshStandardMaterial color="#7c5a3a" />
-      </mesh>
-      <mesh position={[-5.2, 0.7, 1.2]} castShadow>
-        <cylinderGeometry args={[0.18, 0.22, 1.2, 10]} />
-        <meshStandardMaterial color="#d6d3d1" />
-      </mesh>
-      <mesh position={[-5.2, 1.4, 1.2]}>
-        <cylinderGeometry args={[0.35, 0.28, 0.28, 12]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fde68a" emissiveIntensity={0.35} />
-      </mesh>
-      <pointLight position={[-5.2, 1.55, 1.2]} intensity={6} distance={8} color="#fff4d6" />
 
-      {/* Kitchenette strip */}
       <mesh position={[5.2, 0.55, 1.5]} castShadow>
         <boxGeometry args={[1.6, 1.1, 3.2]} />
         <meshStandardMaterial color="#e7e5e4" />
@@ -227,3 +327,5 @@ export function HomeInterior() {
     </Room>
   )
 }
+
+void OUTFIT_CATALOG

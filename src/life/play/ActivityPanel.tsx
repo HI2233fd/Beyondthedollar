@@ -149,7 +149,7 @@ function Posting({ employerId }: { employerId: EmployerId }) {
   const job = EMPLOYERS[employerId]
   const app = appOf(facts, employerId)
   const employedHere = hasJob && facts.employerId === employerId
-  const where = employerId === 'summit' ? 'office' : employerId === 'freshmart' ? 'grocery' : 'city'
+  const where = employerId === 'summit' ? 'office' : employerId === 'freshmart' ? 'grocery' : 'cafe'
   const [error, setError] = useState<string | null>(null)
   const net = job.hourly * 4 * (1 - 0.18)
 
