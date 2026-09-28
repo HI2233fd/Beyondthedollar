@@ -1,6 +1,6 @@
 import type { LivingNpcDef } from '../life/day/schedule'
 
-const day = (name: string, id: string, shirt: string, home: [number, number], work: { scene: string; x: number; z: number }, chatter: string): LivingNpcDef => ({
+const day = (name: string, id: string, shirt: string, home: [number, number], work: { scene: string; x: number; z: number }, chatter: string, traits?: string): LivingNpcDef => ({
   id,
   name,
   role: 'worker',
@@ -12,6 +12,7 @@ const day = (name: string, id: string, shirt: string, home: [number, number], wo
     { from: 17 * 60, to: 24 * 60, at: { scene: 'city', x: home[0], z: home[1] } },
   ],
   chatter: [chatter],
+  traits,
 })
 
 /** Additional persistent residents. Named story NPCs stay in their original files. */
@@ -32,6 +33,6 @@ export const EXTRA_RESIDENTS: LivingNpcDef[] = [
   day('Quinn', 'res-quinn', '#b45309', [-66, 14], { scene: 'city', x: -68, z: 10 }, 'The stall only sells what was stocked.'),
   day('Samir', 'res-samir', '#1d4ed8', [60, 16], { scene: 'city', x: 68, z: 12 }, 'Fuel price is on the pump before you pay.'),
   day('Tara', 'res-tara', '#065f46', [-66, 30], { scene: 'city', x: -70, z: 34 }, 'The garden keeps what we finish.'),
-  day('Wes', 'res-wes', '#7c2d12', [4, -26], { scene: 'cafe', x: 2, z: 2 }, 'Dev wants the ticket, then the cup, then the table.'),
+  day('Wes', 'res-wes', '#7c2d12', [4, -26], { scene: 'cafe', x: 2, z: 2 }, 'Dev wants the ticket, then the cup, then the table.', 'Practical, and impatient if you skip a step.'),
   day('Yuki', 'res-yuki', '#334155', [-4, 8], { scene: 'city', x: 0, z: 24 }, 'Bus fare is small. The time still passes.'),
 ]

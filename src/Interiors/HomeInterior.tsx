@@ -1,6 +1,8 @@
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Chair, Plant, Rug, WallClock } from '../props'
+import { Bed, Counter, Fridge as FridgeUnit, Shelf, Sink, Sofa, Stove, Wardrobe } from '../world/furniture'
+import { box } from '../collision'
 import { LearningStation } from '../curriculum/LearningStation'
 import { KioskStation } from '../simulation/KioskStation'
 import { useGame, type Dialogue } from '../GameState'
@@ -272,7 +274,7 @@ function HomeExtras() {
 
 export function HomeInterior() {
   return (
-    <Room w={14} d={12} floor="#d6cfc4" wall="#f3efe8">
+    <Room w={14} d={12} floor="#d6cfc4" wall="#f3efe8" extraBoxes={[box(-4.2, -3, 1.6, 2.2), box(2.2, -3.6, 2.3, 1), box(5.5, 1.4, 1.1, 3.4), box(-5.6, -0.6, 1.2, 0.7)]}>
       <BedRest />
       <Fridge />
       <Closet />
@@ -280,28 +282,9 @@ export function HomeInterior() {
       <DeskComputer />
       <MailSlot />
 
-      <group position={[-3.8, 0, -2.2]}>
-        <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[5.2, 4.4]} />
-          <meshStandardMaterial color="#c4b5a0" />
-        </mesh>
-        <mesh position={[-0.6, 0.35, -0.8]} castShadow>
-          <boxGeometry args={[2.2, 0.35, 2.8]} />
-          <meshStandardMaterial color="#5b7c99" roughness={0.7} />
-        </mesh>
-        <mesh position={[-0.6, 0.62, -1.7]} castShadow>
-          <boxGeometry args={[2.2, 0.35, 0.55]} />
-          <meshStandardMaterial color="#e8eef5" />
-        </mesh>
-        <mesh position={[1.6, 0.55, 0.6]} castShadow>
-          <boxGeometry args={[1.4, 0.08, 0.7]} />
-          <meshStandardMaterial color="#7c5a3a" />
-        </mesh>
-        <mesh position={[-2.0, 0.85, 1.4]} castShadow>
-          <boxGeometry args={[1.3, 1.7, 0.55]} />
-          <meshStandardMaterial color="#6b5344" />
-        </mesh>
-      </group>
+      <Bed position={[-4.2, 0, -3]} />
+      <Shelf position={[-6.2, 0, 3.4]} rotation={Math.PI / 2} />
+      <Wardrobe position={[-5.8, 0, -0.6]} rotation={Math.PI / 2} />
 
       <Rug position={[2.2, 0.02, 1.2]} size={[5.5, 4]} color="#b08968" />
       <WallClock position={[2.2, 3.2, -5.8]} />
@@ -309,23 +292,11 @@ export function HomeInterior() {
       <Chair position={[0.4, 0, -0.8]} rotation={0.4} />
       <Chair position={[3.8, 0, -0.4]} rotation={-0.3} />
 
-      <mesh position={[2.4, 0.45, -3.8]} castShadow>
-        <boxGeometry args={[4.2, 0.9, 1.4]} />
-        <meshStandardMaterial color="#6b7c8f" />
-      </mesh>
-      <mesh position={[2.4, 0.95, -4.3]} castShadow>
-        <boxGeometry args={[4.2, 0.7, 0.35]} />
-        <meshStandardMaterial color="#5a6b7d" />
-      </mesh>
-
-      <mesh position={[5.2, 0.55, 1.5]} castShadow>
-        <boxGeometry args={[1.6, 1.1, 3.2]} />
-        <meshStandardMaterial color="#e7e5e4" />
-      </mesh>
-      <mesh position={[5.2, 1.15, 1.5]}>
-        <boxGeometry args={[1.65, 0.08, 3.25]} />
-        <meshStandardMaterial color="#a8a29e" />
-      </mesh>
+      <Sofa position={[2.2, 0, -3.6]} />
+      <FridgeUnit position={[6.1, 0, 2.6]} rotation={-Math.PI / 2} />
+      <Counter position={[5.5, 0, 1.1]} rotation={-Math.PI / 2} width={1.6} />
+      <Stove position={[5.5, 0, 0.1]} rotation={-Math.PI / 2} />
+      <Sink position={[5.5, 0, 1.7]} rotation={-Math.PI / 2} />
 
       <NPC
         id="home-jordan"

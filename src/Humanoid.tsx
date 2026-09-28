@@ -192,6 +192,12 @@ export function Humanoid({
             <capsuleGeometry args={[0.18, 0.32, 6, 12]} />
             <meshStandardMaterial color={top} roughness={0.62} />
           </mesh>
+          {look.jacket && (
+            <mesh position={[0, 0.22, 0.12]}>
+              <boxGeometry args={[0.22, 0.08, 0.04]} />
+              <meshStandardMaterial color={look.shirt} />
+            </mesh>
+          )}
         </group>
 
         <group ref={armL} position={[-shoulder * bodyScale, 1.38, 0]}>

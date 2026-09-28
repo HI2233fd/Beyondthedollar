@@ -2,6 +2,10 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import type { Group } from 'three'
 import { Car } from '../props'
+import { useRig } from '../rig'
+import { useGame } from '../GameState'
+import { registerImpact } from './impact'
+import { useWorldUi } from './simStore'
 import { ROADS_EW, ROADS_NS, ROAD_HALF, WORLD, cityCollision } from '../cityLayout'
 import { box } from '../collision'
 import { setActiveBoxes } from '../world'
@@ -39,9 +43,13 @@ export function Traffic() {
 
   const refs = useRef<(Group | null)[]>([])
   const positions = useRef(cars.map(() => ({ x: 0, z: 0 })))
+  const rig = useRig()
 
   useFrame((_, dt) => {
+    if (useGame.getState().timeScale === 0 || useWorldUi.getState().fatal) return
     const step = Math.min(dt, 0.05)
+    const player = rig.groupRef.current
+    const driving = !!useGame.getState().dayLife.drivingVehicleId
     cars.forEach((car, i) => {
       const g = refs.current[i]
       if (!g) return
@@ -57,9 +65,18 @@ export function Traffic() {
         const p = positions.current[j]
         return Math.hypot(p.x - x, p.z - z) < 4.2
       })
-      if (nearCross || blocked) {
-        car.t -= car.speed * step * 0.65
+      let brake = 0
+      if (player && !driving) {
+        const dx = player.position.x - x
+        const dz = player.position.z - z
+        const ahead = car.lane.axis === 'x' ? dx * car.lane.dir : dz * car.lane.dir
+        const lateral = car.lane.axis === 'x' ? Math.abs(dz) : Math.abs(dx)
+        if (ahead > 0 && ahead < 8 && lateral < 1.35) brake = 1 - ahead / 8
+        if (Math.hypot(dx, dz) < 1.35 && lateral < 1.25) registerImpact(car.speed * (1 - brake * 0.45))
       }
+      if (nearCross) car.t -= car.speed * step * 0.45
+      else if (blocked) car.t -= car.speed * step * 0.7
+      else if (brake > 0) car.t -= car.speed * step * brake * 0.8
       g.position.set(x, 0, z)
       g.rotation.y = car.lane.axis === 'x' ? (car.lane.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : car.lane.dir > 0 ? 0 : Math.PI
       positions.current[i] = { x, z }

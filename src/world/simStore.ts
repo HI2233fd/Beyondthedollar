@@ -9,6 +9,10 @@ interface WorldUi {
   bindings: ControlBindings
   guiding: boolean
   guideMessage: string | null
+  fatal: boolean
+  protectUntil: number
+  stamina: number
+  carSpeed: number
   setMap: (open: boolean) => void
   setCalendar: (open: boolean) => void
   setBindings: (bindings: Partial<ControlBindings> | null | undefined) => void
@@ -22,6 +26,10 @@ export const useWorldUi = create<WorldUi>((set) => ({
   bindings: { ...DEFAULT_BINDINGS },
   guiding: false,
   guideMessage: null,
+  fatal: false,
+  protectUntil: 0,
+  stamina: 100,
+  carSpeed: 0,
   setMap: (mapOpen) => set(mapOpen ? { mapOpen: true, calendarOpen: false } : { mapOpen: false }),
   setCalendar: (calendarOpen) => set(calendarOpen ? { calendarOpen: true, mapOpen: false } : { calendarOpen: false }),
   setBindings: (bindings) =>

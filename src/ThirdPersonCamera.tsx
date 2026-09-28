@@ -1,6 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { Vector3 } from 'three'
 import { useRig } from './rig'
+import { useGame } from './GameState'
+import { useRef } from 'react'
 import { collides } from './collision'
 import { getActiveBoxes } from './world'
 
@@ -21,6 +23,8 @@ function reducedMotion() {
 export function ThirdPersonCamera() {
   const rig = useRig()
   const { camera } = useThree()
+  const scene = useGame((s) => s.scene)
+  const prevScene = useRef(scene)
 
   useFrame((_, delta) => {
     const g = rig.groupRef.current
@@ -28,7 +32,9 @@ export function ThirdPersonCamera() {
     const dt = Math.min(delta, 0.05)
     const yaw = rig.yaw.current
     const pitch = rig.pitch.current
-    const dist = rig.distance.current
+    const dist = scene === 'city' ? rig.distance.current : Math.min(rig.distance.current, 3.15)
+    const snap = prevScene.current !== scene
+    prevScene.current = scene
 
     const horiz = dist * Math.cos(pitch)
     const fwdX = Math.sin(yaw)
@@ -58,7 +64,7 @@ export function ThirdPersonCamera() {
     desired.copy(head).add(dir.multiplyScalar(allowed))
     if (desired.y < 0.4) desired.y = 0.4
 
-    const blend = reducedMotion() ? 1 : 1 - Math.exp(-12 * dt)
+    const blend = snap || reducedMotion() ? 1 : 1 - Math.exp(-12 * dt)
     camera.position.lerp(desired, blend)
     lookAt.set(g.position.x, g.position.y + FOCUS_Y, g.position.z)
     if (smoothedLook.lengthSq() < 0.001) smoothedLook.copy(lookAt)

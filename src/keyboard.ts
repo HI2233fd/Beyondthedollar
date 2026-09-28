@@ -87,6 +87,7 @@ export function movementLocked(): boolean {
     s.checkpointOpen ||
     !!s.activeConceptId ||
     !!s.dayLife?.drivingVehicleId ||
+    ui.fatal ||
     !!s.dayLife?.sittingId ||
     !s.characterCreated ||
     ui.mapOpen ||

@@ -2,6 +2,7 @@ import { Billboard, Text } from '@react-three/drei'
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Guest, Plant } from '../props'
+import { Counter, Fridge, Shelf } from '../world/furniture'
 import { box } from '../collision'
 import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
@@ -190,29 +191,14 @@ export function GroceryInterior() {
       extraBoxes={[box(0, -1, 16, 1.4), box(0, -4.2, 16, 1.4), box(-6, 4, 2.6, 1.2)]}
     >
       {/* Shelves (with stocked goods on the back shelf) */}
-      {[-1, -4.2].map((z) => (
-        <group key={z} position={[0, 0, z]}>
-          <mesh position={[0, 0.9, 0]} castShadow>
-            <boxGeometry args={[16, 1.8, 1.2]} />
-            <meshStandardMaterial color="#8b93a1" />
-          </mesh>
-          <mesh position={[0, 1.85, 0]}>
-            <boxGeometry args={[16, 0.1, 1.2]} />
-            <meshStandardMaterial color="#6b7280" />
-          </mesh>
-        </group>
+      {[-6.2, -4.4, -2.6, -0.8, 1, 2.8, 4.6, 6.4].map((x) => (
+        <Shelf key={`back-${x}`} position={[x, 0, -4.6]} />
       ))}
-      {/* Assorted stock on the back shelf */}
-      {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#a855f7', '#ec4899', '#eab308', '#14b8a6'].map((c, i) => (
-        <group key={i} position={[-6.5 + i * 1.9, 0, -4.2]}>
-          {[1.1, 1.55].map((y) => (
-            <mesh key={y} position={[0, y, 0.35]} castShadow>
-              <boxGeometry args={[0.34, 0.36, 0.3]} />
-              <meshStandardMaterial color={c} />
-            </mesh>
-          ))}
-        </group>
+      {[-5.2, -3.4, -1.6, 0.2, 2, 3.8].map((x) => (
+        <Shelf key={`mid-${x}`} position={[x, 0, -1.2]} />
       ))}
+      <Fridge position={[-7.4, 0, 1.2]} rotation={Math.PI / 2} />
+      <Counter position={[-6, 0, 4.2]} width={2.4} top="#f5f5f4" body="#14532d" />
 
       {/* Aisle direction signs */}
       {[-4, 0, 4].map((x, i) => (

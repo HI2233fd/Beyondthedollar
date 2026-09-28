@@ -1,4 +1,4 @@
-import { BUILDINGS, BACKGROUND, POIS, WORLD, doorPosition, type BuildingDef } from '../cityLayout'
+import { BUILDINGS, BACKGROUND, POIS, ROADS_EW, ROADS_NS, WORLD, doorPosition, type BuildingDef } from '../cityLayout'
 import { useGame } from '../GameState'
 
 const CELL = 4
@@ -78,13 +78,13 @@ function toCell(v: number) {
   return Math.round((v - WORLD.minX) / CELL)
 }
 
-/** A* on a coarse grid. Returns the next world point, or done/clear flags. */
-export function nextGuideStep(x: number, z: number, tx: number, tz: number): { x: number; z: number; done: boolean; clear: boolean } {
-  if (Math.hypot(tx - x, tz - z) < 3.2) return { x: tx, z: tz, done: true, clear: true }
+/** Full pedestrian path in world meters, or null when the grid cannot reach the door. */
+export function pedestrianPath(x: number, z: number, tx: number, tz: number): { x: number; z: number }[] | null {
+  if (Math.hypot(tx - x, tz - z) < 3.2) return [{ x, z }, { x: tx, z: tz }]
   const start = { ix: toCell(x), iz: toCell(z) }
   const goal = { ix: toCell(tx), iz: toCell(tz) }
   const span = Math.ceil((WORLD.maxX - WORLD.minX) / CELL)
-  if (goal.ix < 1 || goal.iz < 1 || goal.ix > span - 1 || goal.iz > span - 1) return { x, z, done: false, clear: false }
+  if (goal.ix < 1 || goal.iz < 1 || goal.ix > span - 1 || goal.iz > span - 1) return null
 
   const open: { ix: number; iz: number; g: number; f: number }[] = [{ ...start, g: 0, f: 0 }]
   const came = new Map<string, string>()
@@ -109,13 +109,7 @@ export function nextGuideStep(x: number, z: number, tx: number, tz: number): { x
         k = key(px, pz)
       }
       path.reverse()
-      const step = path[1] ?? path[0]
-      return {
-        x: WORLD.minX + step.ix * CELL,
-        z: WORLD.minZ + step.iz * CELL,
-        done: false,
-        clear: true,
-      }
+      return path.map((p) => ({ x: WORLD.minX + p.ix * CELL, z: WORLD.minZ + p.iz * CELL }))
     }
     for (const [dx, dz] of dirs) {
       const ix = cur.ix + dx
@@ -133,5 +127,39 @@ export function nextGuideStep(x: number, z: number, tx: number, tz: number): { x
       open.push({ ix, iz, g, f })
     }
   }
-  return { x, z, done: false, clear: false }
+  return null
+}
+
+/** A* on a coarse grid. Returns the next world point, or done/clear flags. */
+export function nextGuideStep(x: number, z: number, tx: number, tz: number): { x: number; z: number; done: boolean; clear: boolean } {
+  if (Math.hypot(tx - x, tz - z) < 3.2) return { x: tx, z: tz, done: true, clear: true }
+  const path = pedestrianPath(x, z, tx, tz)
+  const step = path?.[1]
+  if (!step) return { x, z, done: false, clear: false }
+  return { x: step.x, z: step.z, done: false, clear: true }
+}
+
+function snapRoad(px: number, pz: number): { x: number; z: number; axis: 'x' | 'z' } {
+  let best = { x: px, z: ROADS_EW[0], axis: 'z' as 'x' | 'z', d: Infinity }
+  for (const rz of ROADS_EW) {
+    const d = Math.abs(pz - rz)
+    if (d < best.d) best = { x: px, z: rz, axis: 'z', d }
+  }
+  for (const rx of ROADS_NS) {
+    const d = Math.abs(px - rx)
+    if (d < best.d) best = { x: rx, z: pz, axis: 'x', d }
+  }
+  return best
+}
+
+/** Road-following route. Distinct from the sidewalk A* path. */
+export function drivingPath(x: number, z: number, tx: number, tz: number): { x: number; z: number }[] {
+  const a = snapRoad(x, z)
+  const b = snapRoad(tx, tz)
+  const points = [{ x, z }, { x: a.x, z: a.z }]
+  if (a.axis !== b.axis || (a.axis === 'z' ? a.z !== b.z : a.x !== b.x)) {
+    points.push(a.axis === 'z' ? { x: b.x, z: a.z } : { x: a.x, z: b.z })
+  }
+  points.push({ x: b.x, z: b.z }, { x: tx, z: tz })
+  return points
 }

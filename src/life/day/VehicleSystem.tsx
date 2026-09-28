@@ -5,9 +5,10 @@ import { Car } from '../../props'
 import { useGame } from '../../GameState'
 import { useInteractable } from '../../InteractionSystem'
 import { pressed, consumeInteract } from '../../keyboard'
-import { resolveMovement } from '../../collision'
+import { collides, resolveMovement } from '../../collision'
 import { getActiveBoxes } from '../../world'
 import { useRig } from '../../rig'
+import { useWorldUi } from '../../world/simStore'
 import type { OwnedVehicle } from './types'
 
 function ParkedOwnedCar({ vehicle }: { vehicle: OwnedVehicle }) {
@@ -20,7 +21,7 @@ function ParkedOwnedCar({ vehicle }: { vehicle: OwnedVehicle }) {
     scene: 'city',
     position: [vehicle.x, 0, vehicle.z],
     radius: 3.2,
-    prompt: driving === vehicle.id ? 'Already driving' : `Enter ${vehicle.label}`,
+    prompt: driving === vehicle.id ? 'Already driving' : `Drive ${vehicle.label}`,
     onInteract: () => {
       if (driving) return
       dayAct({ type: 'enter-vehicle', vehicleId: vehicle.id })
@@ -37,6 +38,8 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
   const mesh = useRef<Group>(null)
   const yaw = useRef(vehicle.yaw)
   const speed = useRef(0)
+  const testFuel = useRef(30)
+  const fuelWrite = useRef(0)
 
   useEffect(() => {
     const g = rig.groupRef.current
@@ -58,8 +61,11 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
     if (pressed.has('KeyA')) steer += 1
     if (pressed.has('KeyD')) steer -= 1
 
-    const target = throttle * 11
+    const testing = vehicle.id === 'testdrive'
+    const fuel = testing ? testFuel.current : useGame.getState().worldSim.fuel
+    const target = fuel <= 0 ? 0 : throttle * 11
     speed.current += (target - speed.current) * Math.min(1, dt * 2.2)
+    if (fuel <= 0) speed.current *= Math.max(0, 1 - dt * 1.4)
     if (pressed.has('Space')) speed.current *= Math.max(0, 1 - dt * 4)
     if (Math.abs(speed.current) > 0.4) {
       yaw.current += steer * dt * 1.6 * Math.sign(speed.current || 1)
@@ -77,17 +83,43 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
       mesh.current.rotation.y = yaw.current
     }
 
-    if (consumeInteract() && Math.abs(speed.current) < 1.2) {
+    if (Math.abs(speed.current) > 0.3 && fuel > 0) {
+      const burn = Math.abs(speed.current) * dt * 0.05
+      if (testing) testFuel.current = Math.max(0, testFuel.current - burn)
+      else {
+        fuelWrite.current += burn
+        if (fuelWrite.current > 1.5) {
+          const next = Math.max(0, useGame.getState().worldSim.fuel - fuelWrite.current)
+          useGame.getState().patchWorld({ fuel: Math.round(next * 10) / 10 })
+          fuelWrite.current = 0
+        }
+      }
+    }
+    const shown = Math.abs(speed.current)
+    if (Math.abs(useWorldUi.getState().carSpeed - shown) > 0.5) useWorldUi.setState({ carSpeed: shown })
+
+    if (consumeInteract() && Math.abs(speed.current) < 0.8) {
       const side = yaw.current + Math.PI / 2
-      dayAct({
-        type: 'park-vehicle',
-        vehicleId: vehicle.id,
-        x: g.position.x,
-        z: g.position.z,
-        yaw: yaw.current,
-      })
-      g.position.x += Math.sin(side) * 2.4
-      g.position.z += Math.cos(side) * 2.4
+      const sx = g.position.x + Math.sin(side) * 2.4
+      const sz = g.position.z + Math.cos(side) * 2.4
+      if (collides(sx, sz, 0.45, getActiveBoxes())) {
+        useGame.getState().openDialogue({
+          name: 'Car',
+          text: 'No clear ground beside the car. Roll to an open curb, then press E.',
+          options: [{ label: 'Back', close: true }],
+        })
+      } else {
+        dayAct({
+          type: 'park-vehicle',
+          vehicleId: vehicle.id,
+          x: g.position.x,
+          z: g.position.z,
+          yaw: yaw.current,
+        })
+        g.position.x = sx
+        g.position.z = sz
+        if (testing) useGame.getState().patchWorld({ testDrive: false })
+      }
     }
   })
 

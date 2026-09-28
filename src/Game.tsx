@@ -53,6 +53,9 @@ import {
 } from './world/NewInteriors'
 import { CalendarPanel, GuideBanner, MapPanel } from './world/MapPanel'
 import { useWorldUi } from './world/simStore'
+import { useRig } from './rig'
+import { applyMoney } from './world/pay'
+import { POIS } from './cityLayout'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -153,6 +156,11 @@ export function Game() {
   const calendarOpen = useWorldUi((s) => s.calendarOpen)
   const [fade, setFade] = useState(false)
   const [locked, setLocked] = useState(false)
+
+  useEffect(() => {
+    const id = window.setInterval(() => useGame.getState().checkpoint(), 45000)
+    return () => window.clearInterval(id)
+  }, [])
 
   useEffect(() => {
     initControls()
@@ -285,6 +293,8 @@ export function Game() {
           </>
         )}
 
+        <StoryMeters />
+        <FatalOverlay />
         {showHint && (
           <div className="controls-hint">
             WASD to walk · Shift to run · E to interact · P phone · M map · T calendar
@@ -296,5 +306,80 @@ export function Game() {
         <div className={`fade-overlay ${fade || transitioning ? 'show' : ''}`} />
       </div>
     </RigContext.Provider>
+  )
+}
+
+function StoryMeters() {
+  const created = useGame((s) => s.characterCreated)
+  const stamina = useWorldUi((s) => s.stamina)
+  const speed = useWorldUi((s) => s.carSpeed)
+  const driving = useGame((s) => s.dayLife.drivingVehicleId)
+  const fuel = useGame((s) => s.worldSim.fuel)
+  const rig = useRig()
+  if (!created) return null
+  return (
+    <>
+      {stamina < 99 && !driving && (
+        <div className="stamina-meter" aria-label="Sprint stamina">
+          <span style={{ width: `${Math.max(0, Math.min(100, stamina))}%` }} />
+        </div>
+      )}
+      {driving && (
+        <div className="drive-meter">
+          <span>{Math.round(speed * 3.6)} km/h</span>
+          <span>Fuel {driving === 'testdrive' ? 'test' : fuel.toFixed(0)}</span>
+          {driving !== 'testdrive' && fuel <= 0 && speed < 0.6 && (
+            <button
+              type="button"
+              onClick={() => {
+                const err = applyMoney(-15, 'Tow to fuel station')
+                if (err) {
+                  useGame.getState().openDialogue({ name: 'Tow', text: err, options: [{ label: 'Back', close: true }] })
+                  return
+                }
+                const g = useGame.getState()
+                g.dayAct({ type: 'park-vehicle', vehicleId: driving, x: POIS.fuel.x, z: POIS.fuel.z + 6, yaw: 0 })
+                g.patchWorld({ fuel: 8 })
+                const body = rig.groupRef.current
+                if (body) body.position.set(POIS.fuel.x + 3, 0, POIS.fuel.z + 6)
+              }}
+            >
+              Tow to the pump · $15
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+function FatalOverlay() {
+  const fatal = useWorldUi((s) => s.fatal)
+  const reload = useGame((s) => s.reloadSafeSave)
+  const [note, setNote] = useState<string | null>(null)
+  if (!fatal) return null
+  return (
+    <div className="fatal-overlay">
+      <h2>Your life ended.</h2>
+      <p>The safe checkpoint was not overwritten.</p>
+      {note && <p>{note}</p>}
+      <button
+        type="button"
+        onClick={() => {
+          if (!reload()) setNote('No safe checkpoint yet. Return to the menu and continue from the last save.')
+        }}
+      >
+        Reload last safe save
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          useWorldUi.setState({ fatal: false })
+          useGame.setState({ characterCreated: false, timeScale: 1 })
+        }}
+      >
+        Return to menu
+      </button>
+    </div>
   )
 }

@@ -141,6 +141,7 @@ export interface LivingNpcDef {
   /** minuteOfDay -> waypoint while on campus / city */
   route: { from: number; to: number; at: NpcWaypoint }[]
   chatter: string[]
+  traits?: string
   opportunityHint?: string
 }
 
