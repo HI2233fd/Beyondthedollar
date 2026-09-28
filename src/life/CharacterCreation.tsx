@@ -15,6 +15,7 @@ const FACES: CharacterLook['face'][] = ['soft', 'angular', 'round', 'oval']
 const BODIES: CharacterLook['body'][] = ['slim', 'average', 'athletic', 'plus']
 const HAIR_STYLES: CharacterLook['hairStyle'][] = ['short', 'medium', 'long', 'bun', 'fade']
 const ACCESSORIES: CharacterLook['accessory'][] = ['none', 'glasses', 'hat', 'earrings']
+const BASE_MODELS: CharacterLook['baseModel'][] = ['male', 'female']
 
 type Step = 'identity' | 'look' | 'goals'
 
@@ -107,6 +108,14 @@ export function CharacterCreation() {
               <SwatchRow label="Hair" values={HAIRS} value={look.hair} onPick={(hair) => setLook((a) => ({ ...a, hair }))} />
               <SwatchRow label="Shirt" values={SHIRTS} value={look.shirt} onPick={(shirt) => setLook((a) => ({ ...a, shirt }))} />
               <SwatchRow label="Pants" values={PANTS} value={look.pants} onPick={(pants) => setLook((a) => ({ ...a, pants }))} />
+              <div className="create-chip-row">
+                <span>Character rig</span>
+                {BASE_MODELS.map((baseModel) => (
+                  <button key={baseModel} type="button" className={look.baseModel === baseModel ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, baseModel }))}>
+                    {baseModel}
+                  </button>
+                ))}
+              </div>
               <div className="create-chip-row">
                 <span>Style</span>
                 {HAIR_STYLES.map((f) => (

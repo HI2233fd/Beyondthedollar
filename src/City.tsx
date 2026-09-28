@@ -8,6 +8,7 @@ import { useGame } from './GameState'
 import { dayPhase, stampFromMinutes } from './simulation/time'
 import { DowntownDistrict } from './life/DowntownDistrict'
 import { DowntownTeaser } from './life/DowntownTeaser'
+import { DistrictLandmarks } from './DistrictLandmarks'
 
 const ROAD_HALF = 4.5
 const SIDEWALK_OUTER = 8
@@ -218,6 +219,8 @@ export function City() {
       {BUILDINGS.map((b) => (
         <Building key={b.id} def={b} />
       ))}
+
+      <DistrictLandmarks />
 
       {PARKED_CARS.map((c, i) => (
         <Car

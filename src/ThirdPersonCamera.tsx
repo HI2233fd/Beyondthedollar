@@ -20,24 +20,24 @@ export function ThirdPersonCamera() {
   const interior = scene !== 'city'
 
   // Interiors use a closer, lower camera that stays under the ceiling.
-  const DIST = interior ? 4 : 6.5
   const HEIGHT = interior ? 1.4 : 2.4
   const LOOK_HEIGHT = interior ? 1.2 : 1.3
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     const g = rig.groupRef.current
     if (!g) return
+    const distance = Math.max(interior ? 2.8 : 3.4, (interior ? 4 : 6.5) + rig.zoom.current)
     const yaw = rig.yaw.current
     const pitch = interior ? Math.min(0.6, Math.max(0.22, rig.pitch.current)) : rig.pitch.current
 
-    const horiz = DIST * Math.cos(pitch)
+    const horiz = distance * Math.cos(pitch)
     const fwdX = Math.sin(yaw)
     const fwdZ = Math.cos(yaw)
 
     head.set(g.position.x, g.position.y + LOOK_HEIGHT, g.position.z)
     desired.set(
       g.position.x - fwdX * horiz,
-      g.position.y + HEIGHT + DIST * Math.sin(pitch),
+      g.position.y + HEIGHT + distance * Math.sin(pitch),
       g.position.z - fwdZ * horiz,
     )
 
@@ -59,7 +59,9 @@ export function ThirdPersonCamera() {
     }
     desired.copy(head).add(dir.multiplyScalar(allowed))
 
-    camera.position.lerp(desired, 0.16)
+    // Use time-based damping so camera follow feels consistent at different
+    // frame rates and catches up promptly after a door transition.
+    camera.position.lerp(desired, 1 - Math.exp(-8 * Math.min(delta, 0.05)))
     lookAt.set(g.position.x, g.position.y + LOOK_HEIGHT, g.position.z)
     camera.lookAt(lookAt)
   })

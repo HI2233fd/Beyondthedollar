@@ -91,6 +91,7 @@ export function Game() {
       pitch: { current: 0.45 },
       walk: { current: 0 },
       moving: { current: false },
+      zoom: { current: 0 },
     }),
     [],
   )

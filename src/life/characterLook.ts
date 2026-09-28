@@ -2,6 +2,7 @@ import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Ski
 
 /** Expanded appearance — old saves merge via normalizeAppearance. */
 export interface CharacterLook {
+  baseModel: 'male' | 'female'
   skin: string
   hair: string
   hairStyle: 'short' | 'medium' | 'long' | 'bun' | 'fade'
@@ -17,6 +18,7 @@ export interface CharacterLook {
 }
 
 export const DEFAULT_LOOK: CharacterLook = {
+  baseModel: 'male',
   skin: '#d0996b',
   hair: '#241a12',
   hairStyle: 'short',
@@ -37,6 +39,7 @@ export function normalizeAppearance(raw: Partial<CharacterAppearance & Character
   if (!raw) return base
   return {
     ...base,
+    baseModel: (raw as CharacterLook).baseModel === 'female' ? 'female' : base.baseModel,
     skin: raw.skin ?? base.skin,
     hair: raw.hair ?? base.hair,
     hairStyle: (raw as CharacterLook).hairStyle ?? base.hairStyle,

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
+import { MathUtils } from 'three'
 import { useRig } from './rig'
 import { useGame } from './GameState'
 
@@ -40,7 +41,13 @@ export function PointerLook() {
       )
     }
 
+    const onWheel = (e: WheelEvent) => {
+      rig.zoom.current = MathUtils.clamp(rig.zoom.current + Math.sign(e.deltaY) * 0.6, -1.2, 4.2)
+      e.preventDefault()
+    }
+
     el.addEventListener('click', onClick)
+    el.addEventListener('wheel', onWheel, { passive: false })
     window.addEventListener('mousemove', onMove)
 
     // Release the mouse when a modal/dialogue/lesson opens.
@@ -61,6 +68,7 @@ export function PointerLook() {
 
     return () => {
       el.removeEventListener('click', onClick)
+      el.removeEventListener('wheel', onWheel)
       window.removeEventListener('mousemove', onMove)
       unsub()
     }

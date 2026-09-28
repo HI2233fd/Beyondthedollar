@@ -8,6 +8,8 @@ export interface PlayerRig {
   pitch: MutableRefObject<number>
   walk: MutableRefObject<number>
   moving: MutableRefObject<boolean>
+  /** Camera distance offset controlled by the mouse wheel. */
+  zoom: MutableRefObject<number>
 }
 
 export const RigContext = createContext<PlayerRig | null>(null)

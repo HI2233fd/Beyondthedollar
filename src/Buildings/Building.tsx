@@ -1,10 +1,12 @@
 import { Billboard, Text } from '@react-three/drei'
+import { Suspense } from 'react'
 import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { doorPosition, type BuildingDef } from '../cityLayout'
 import { INTERIOR_SPAWN } from '../Interiors/spawns'
 import { buildingHasActiveCurriculum } from '../curriculum'
 import type { BuildingId } from '../curriculum/types'
+import { ReferenceFacade } from './ReferenceFacade'
 
 export function Building({ def }: { def: BuildingDef }) {
   const enterScene = useGame((s) => s.enterScene)
@@ -43,16 +45,16 @@ export function Building({ def }: { def: BuildingDef }) {
   return (
     <group>
       {/* Main structure */}
-      <mesh castShadow receiveShadow position={[def.x, def.h / 2, def.z]}>
-        <boxGeometry args={[def.w, def.h, def.d]} />
-        <meshStandardMaterial
-          color={def.color}
-          roughness={def.glass ? 0.15 : 0.85}
-          metalness={def.glass ? 0.6 : 0.05}
-          emissive={learnHere ? def.signColor : '#000000'}
-          emissiveIntensity={learnHere ? 0.22 : 0}
-        />
-      </mesh>
+      <Suspense
+        fallback={
+          <mesh castShadow receiveShadow position={[def.x, def.h / 2, def.z]}>
+            <boxGeometry args={[def.w, def.h, def.d]} />
+            <meshStandardMaterial color={def.color} roughness={def.glass ? 0.15 : 0.85} metalness={def.glass ? 0.6 : 0.05} />
+          </mesh>
+        }
+      >
+        <ReferenceFacade def={def} />
+      </Suspense>
 
       {/* Facade trim / base course */}
       <mesh position={[def.x, 0.45, front + def.facing * 0.02]}>

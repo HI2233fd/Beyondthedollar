@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useGame } from './GameState'
 import { BUILDINGS, WORLD } from './cityLayout'
 import { useRig } from './rig'
@@ -24,6 +24,7 @@ export function Minimap() {
   const rig = useRig()
   const scene = useGame((s) => s.scene)
   const playerDot = useRef<HTMLDivElement>(null)
+  const [district, setDistrict] = useState('Oak Walk')
 
   useEffect(() => {
     let raf = 0
@@ -32,6 +33,10 @@ export function Minimap() {
       if (g && playerDot.current) {
         const { left, top } = toMap(g.position.x, g.position.z)
         playerDot.current.style.transform = `translate(${left - 5}px, ${top - 5}px)`
+        const nextDistrict = g.position.z < 0
+          ? g.position.x < 0 ? 'Oak Walk' : 'North Campus'
+          : g.position.x < 0 ? 'West Park' : 'East Quarter'
+        setDistrict((current) => current === nextDistrict ? current : nextDistrict)
       }
       raf = requestAnimationFrame(loop)
     }
@@ -63,7 +68,9 @@ export function Minimap() {
         })}
         {scene === 'city' && <div ref={playerDot} className="minimap-player" />}
       </div>
-      <div className="minimap-label">{scene === 'city' ? 'Merridian Block' : 'Indoors'}</div>
+      <div className="minimap-label">
+        {scene === 'city' ? district : BUILDINGS.find((building) => building.scene === scene)?.name ?? 'Indoors'}
+      </div>
     </div>
   )
 }

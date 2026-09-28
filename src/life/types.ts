@@ -20,6 +20,8 @@ export interface LifeGoalDef {
 }
 
 export interface CharacterAppearance {
+  /** Optional in persisted saves; missing values normalize to the male reference rig. */
+  baseModel?: 'male' | 'female'
   skin: string
   hair: string
   hairStyle?: 'short' | 'medium' | 'long' | 'bun' | 'fade'
