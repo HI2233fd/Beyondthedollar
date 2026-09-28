@@ -122,7 +122,7 @@ export function InteriorExit({ scene, z = 5.3 }: { scene: SceneId; z?: number })
     scene,
     position: [0, 0, z],
     radius: 2.4,
-    prompt: `Return to ${hood}`,
+    prompt: `Exit to ${hood}`,
     onInteract: () => {
       if (!building) return
       enterScene('city', exitSpawn(building))
@@ -130,11 +130,15 @@ export function InteriorExit({ scene, z = 5.3 }: { scene: SceneId; z?: number })
   })
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, z]}>
-        <planeGeometry args={[2.2, 1.6]} />
-        <meshStandardMaterial color="#34d399" emissive="#34d399" emissiveIntensity={0.45} transparent opacity={0.55} />
+      <mesh position={[0, 1.15, z]} castShadow>
+        <boxGeometry args={[1.15, 2.3, 0.08]} />
+        <meshStandardMaterial color="#1c1917" />
       </mesh>
-      <Text position={[0, 3.05, z + 0.4]} rotation={[0, Math.PI, 0]} fontSize={0.42} color="#34d399" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#05221a">
+      <mesh position={[0.42, 1.1, z + 0.06]}>
+        <sphereGeometry args={[0.04, 8, 8]} />
+        <meshStandardMaterial color="#e7e5e4" metalness={0.6} />
+      </mesh>
+      <Text position={[0, 2.7, z + 0.2]} rotation={[0, Math.PI, 0]} fontSize={0.28} color="#e7e5e4" anchorX="center" anchorY="middle">
         EXIT
       </Text>
     </group>

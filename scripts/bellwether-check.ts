@@ -54,7 +54,9 @@ const look = normalizeAppearance({ hairStyle: 'short', skin: '#112233' })
 check('hair alias', look.hairStyle === 'side-part')
 check('kept skin', look.skin === '#112233')
 check('default height', normalizeAppearance(null).height === 'average')
-check('default shirt', normalizeAppearance({}).shirt === '#527bc4')
+check('default shirt', normalizeAppearance(null).shirt === '#e7e1d6')
+check('default jacket', normalizeAppearance(null).jacket === '#1e3a5f')
+check('old look keeps its shirt', normalizeAppearance({ shirt: '#527bc4' }).jacket === null && normalizeAppearance({ shirt: '#527bc4' }).shirt === '#527bc4')
 check('world defaults', normalizeWorldSim(undefined).gardenStage === 0 && normalizeWorldSim({ gardenStage: 2 }).gardenStage === 2)
 
 for (const dest of allDestinations().filter((d) => d.kind === 'building')) {

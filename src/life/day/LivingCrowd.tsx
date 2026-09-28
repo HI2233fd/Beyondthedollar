@@ -31,6 +31,7 @@ function ScheduledOne({ def }: { def: LivingNpcDef }) {
     onInteract: () => {
       if (!present || !target) return
       const line = def.chatter[Math.floor(Math.random() * def.chatter.length)] ?? 'Hey.'
+      const known = (relation?.talks ?? 0) > 1
       const options: Dialogue['options'] = [{ label: 'Later', close: true }]
       if (def.opportunityHint) {
         options.unshift({
@@ -55,7 +56,13 @@ function ScheduledOne({ def }: { def: LivingNpcDef }) {
       }
       talkToNpc(def.id, def.name, `Saw ${def.name} during the day`)
       dayAct({ type: 'meet-friend', id: def.id })
-      openDialogue({ name: def.name, text: line, options })
+      openDialogue({
+        name: def.name,
+        text: known
+          ? `${def.name.split(' ')[0]} remembers you. ${line}`
+          : `${def.traits ? `${def.traits} ` : ''}${line}`,
+        options,
+      })
     },
   })
 
@@ -68,7 +75,7 @@ function ScheduledOne({ def }: { def: LivingNpcDef }) {
 
   useFrame((_, dt) => {
     const g = group.current
-    if (!g || !present || !target) return
+    if (!g || !present || !target || useGame.getState().timeScale === 0) return
     const dx = target.x - g.position.x
     const dz = target.z - g.position.z
     const dist = Math.hypot(dx, dz)

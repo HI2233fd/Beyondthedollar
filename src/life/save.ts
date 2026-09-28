@@ -7,6 +7,7 @@ import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Ski
 import { DEFAULT_APPEARANCE, DEFAULT_SKILLS } from './types'
 
 export const SAVE_KEY = 'beyond-the-dollar-save-v1'
+export const SAFE_KEY = 'beyond-the-dollar-safe-v1'
 
 /** Serializable slice of game state for localStorage. */
 export interface SaveBlob {
@@ -144,6 +145,26 @@ export function writeSave(blob: SaveBlob) {
     localStorage.setItem(SAVE_KEY, JSON.stringify(blob))
   } catch {
     /* quota / private mode */
+  }
+}
+
+export function writeSafeSave(blob: SaveBlob) {
+  try {
+    localStorage.setItem(SAFE_KEY, JSON.stringify(blob))
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+export function loadSafeSave(): SaveBlob | null {
+  try {
+    const raw = localStorage.getItem(SAFE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as SaveBlob
+    if (parsed?.version !== 1 || !parsed.characterCreated) return null
+    return parsed
+  } catch {
+    return null
   }
 }
 

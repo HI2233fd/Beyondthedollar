@@ -222,8 +222,8 @@ function DoorTrigger({ def, onEnter }: { def: BuildingDef; onEnter: () => void }
   const door = doorPosition(def)
   useInteractable({
     scene: 'city',
-    position: [door[0], 0, door[2] + def.facing * 1.8],
-    radius: 2.8,
+    position: [door[0], 0, door[2] + def.facing * 1.15],
+    radius: 1.8,
     prompt: `Enter ${def.name}`,
     onInteract: onEnter,
     id: `door-${def.id}`,

@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useGame } from '../GameState'
 import { DOWNTOWN_UNLOCK_LEVEL, missionStatus } from './types'
+import { currentStory, storyDoor } from '../world/story'
+import { useRig } from '../rig'
+import { useWorldUi } from '../world/simStore'
 
 function ProgressRing({ pct }: { pct: number }) {
   const r = 22
@@ -36,6 +39,30 @@ export function MissionTracker() {
   const lifeLevel = useGame((s) => s.lifeLevel)
   const playerName = useGame((s) => s.playerName)
   const [stepsOpen, setStepsOpen] = useState(false)
+  const [meters, setMeters] = useState<number | null>(null)
+  const rig = useRig()
+  const scene = useGame((s) => s.scene)
+  const story = currentStory()
+  const patchWorld = useGame((s) => s.patchWorld)
+  const setGuiding = useWorldUi((s) => s.setGuiding)
+
+  useEffect(() => {
+    let raf = 0
+    let last = 0
+    const loop = () => {
+      const now = performance.now()
+      if (now - last > 250) {
+        last = now
+        const g = rig.groupRef.current
+        const door = storyDoor(story.destinationId)
+        if (g && door && scene === 'city') setMeters(Math.round(Math.hypot(door.x - g.position.x, door.z - g.position.z)))
+        else setMeters(null)
+      }
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [rig, scene, story.destinationId])
 
   if (!characterCreated) return null
 
@@ -43,20 +70,41 @@ export function MissionTracker() {
     const status = missionStatus(m)
     return status === 'active' || status === 'accepted'
   }).slice(0, 3)
-  if (active.length === 0) return null
   const focus = active[0]
-  const nextObj = focus.objectives.find((o) => !o.done)
-  const done = focus.objectives.filter((o) => o.done).length
-  const total = focus.objectives.length
+  const nextObj = focus?.objectives.find((o) => !o.done)
+  const done = focus?.objectives.filter((o) => o.done).length ?? 0
+  const total = focus?.objectives.length ?? 0
   const pct = total ? Math.round((done / total) * 100) : 0
 
   return (
     <div className="mission-tracker soft-widget">
       <div className="mission-compact">
         <div className="mission-copy">
-          <span className="soft-kicker">{focus.category} · {active.length} open</span>
-          <strong className="mission-title">{focus.title}</strong>
-          <p className="mission-now">{nextObj ? nextObj.label : 'All steps done'}</p>
+          <span className="soft-kicker">Build Your Independent Life · {story.chapter}</span>
+          <strong className="mission-title">{story.title}</strong>
+          <p className="mission-now">{story.objective}</p>
+          <p className="mission-now">
+            {story.destinationName}
+            {meters != null ? ` · ${meters} m` : ''}
+            {' · '}
+            {story.progress}
+          </p>
+          <p className="mission-now">{story.reward}</p>
+          {story.destinationId && (
+            <button
+              type="button"
+              className="mission-steps-toggle"
+              onClick={() => {
+                patchWorld({ trackedId: story.destinationId })
+                if (scene === 'city') setGuiding(true)
+              }}
+            >
+              Track destination
+            </button>
+          )}
+          {active.length > 0 && (
+            <p className="mission-now">Also open: {focus.title}{nextObj ? ` — ${nextObj.label}` : ''}</p>
+          )}
         </div>
         <ProgressRing pct={pct} />
       </div>

@@ -22,6 +22,10 @@ export function unregisterInteractable(id: string) {
 
 const tmp = new Vector3()
 
+export function listInteractables(scene: SceneId): Interactable[] {
+  return [...registry.values()].filter((i) => i.scene === scene)
+}
+
 export function findNearest(playerPos: Vector3, scene: SceneId): Interactable | null {
   let best: Interactable | null = null
   let bestDist = Infinity

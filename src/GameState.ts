@@ -46,7 +46,8 @@ import {
   OFFICE_WEEKLY_GROSS,
   PAYROLL_TAX_RATE,
 } from './simulation/progression'
-import { HOME_BEDROOM_START } from './cityLayout'
+import { BUILDINGS, HOME_BEDROOM_START } from './cityLayout'
+import { openingLabel } from './world/hours'
 import { debitChecking, defaultLifeFacts, normalizeLifeFacts, type LifeFacts } from './life/play/logic'
 import { defaultDayLife, normalizeDayLife, type DayLife } from './life/day/types'
 import { reduceDay, groceryToPantry, type DayAction } from './life/day/reduce'
@@ -69,7 +70,7 @@ import {
   xpNeededForLevel,
 } from './life/types'
 import { ACHIEVEMENT_DEFS } from './life/missions'
-import { clearSave, emptyLifeDefaults, loadSave, writeSave, type SaveBlob } from './life/save'
+import { clearSave, emptyLifeDefaults, loadSafeSave, loadSave, writeSafeSave, writeSave, type SaveBlob } from './life/save'
 import { defaultWorldSim, normalizeWorldSim, type WorldSim } from './world/worldSim'
 import { useWorldUi } from './world/simStore'
 import { computeActivityOptions, type OptionContext } from './life/optionsEngine'
@@ -292,6 +293,8 @@ interface GameState {
   hasSaveGame: () => boolean
   newGameWipe: () => void
   autosave: () => void
+  checkpoint: () => void
+  reloadSafeSave: () => boolean
   awardXp: (amount: number, reason?: string) => void
   xpToNext: () => number
   bumpSkill: (skill: SkillId, amount?: number) => void
@@ -704,7 +707,8 @@ function createGameStore(): UseGameStore {
     if (get().dialogue) set({ dialogue: null })
   },
 
-  enterScene: (scene, spawn) =>
+  enterScene: (scene, spawn) => {
+    if (!useWorldUi.getState().fatal && get().characterCreated) writeSafeSave(toSaveBlob(get()))
     set((s) => ({
       transitioning: true,
       scene,
@@ -715,7 +719,8 @@ function createGameStore(): UseGameStore {
       phoneOpen: false,
       optionsOpen: false,
       leftHome: s.leftHome || scene === 'city',
-    })),
+    }))
+  },
   finishTransition: () => set({ transitioning: false }),
 
   beginLife: (name, age, appearance, goals) => {
@@ -822,8 +827,20 @@ function createGameStore(): UseGameStore {
   },
   autosave: () => {
     const s = get()
-    if (!s.characterCreated) return
+    if (!s.characterCreated || useWorldUi.getState().fatal) return
     writeSave(toSaveBlob(s))
+  },
+  checkpoint: () => {
+    const s = get()
+    if (!s.characterCreated || useWorldUi.getState().fatal) return
+    writeSafeSave(toSaveBlob(s))
+  },
+  reloadSafeSave: () => {
+    const blob = loadSafeSave()
+    if (!blob) return false
+    applySaveBlob(set, blob)
+    useWorldUi.setState({ fatal: false, protectUntil: performance.now() + 4000, guiding: false })
+    return true
   },
   awardXp: (amount, reason) => {
     if (amount <= 0) return
@@ -1167,14 +1184,9 @@ function createGameStore(): UseGameStore {
     if (businessId) {
       const closed = !businessOpen(businessId, get().totalMinutes)
       if (closed) {
-        const msg =
-          businessId === 'college' || businessId === 'high'
-            ? 'Campus is closed. Weekdays until mid-afternoon.'
-            : businessId === 'cafe'
-              ? 'The café is closed right now.'
-              : businessId === 'bank'
-                ? 'The bank is closed. Weekdays 9–5.'
-                : 'This place is closed right now.'
+        const building = BUILDINGS.find((b) => b.scene === scene)
+        const hours = building ? openingLabel(building.id, get().totalMinutes) : 'Closed'
+        const msg = `${SCENE_LOCATION[scene] ?? 'This place'} is not open. ${hours}.`
         get().openDialogue({ name: SCENE_LOCATION[scene] ?? 'Door', text: msg, options: [{ label: 'OK', close: true }] })
         return msg
       }

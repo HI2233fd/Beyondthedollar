@@ -8,7 +8,7 @@ import { resolveMovement } from './collision'
 import { getActiveBoxes, lerpAngle } from './world'
 import { findNearest } from './InteractionSystem'
 import { useGame } from './GameState'
-import { cancelGuide, guidingNow } from './world/simStore'
+import { cancelGuide, guidingNow, useWorldUi } from './world/simStore'
 import { nextGuideStep, destinationPoint } from './world/nav'
 
 const WALK = 2.5
@@ -20,6 +20,9 @@ export function Player() {
   const localRef = useRef<Group>(null)
   const reachUntil = useRef(0)
   const reachKind = useRef<HumanAnim>('reach')
+  const stamina = useRef(100)
+  const sprintDelay = useRef(0)
+  const sprinting = useRef(false)
 
   const scene = useGame((s) => s.scene)
   const spawn = useGame((s) => s.spawn)
@@ -83,7 +86,7 @@ export function Player() {
       const dest = destinationPoint(useGame.getState().worldSim.trackedId)
       if (dest) {
         const step = nextGuideStep(g.position.x, g.position.z, dest.x, dest.z)
-        if (step.done) cancelGuide()
+        if (step.done) cancelGuide(`Arrived at ${dest.name}. Press E to enter.`)
         else if (!step.clear) cancelGuide('No clear route. Move to an open path and try again.')
         else {
           dx = step.x - g.position.x
@@ -95,7 +98,22 @@ export function Player() {
     }
 
     rig.moving.current = moving
-    const running = moving && (pressed.has(binding('run')) || pressed.has('ShiftRight')) && !guidingNow()
+    const wantSprint = moving && (pressed.has(binding('run')) || pressed.has('ShiftRight')) && !guidingNow()
+    if (wantSprint && stamina.current <= 0) sprinting.current = false
+    if (wantSprint && (stamina.current > 20 || sprinting.current) && stamina.current > 0) {
+      sprinting.current = true
+      stamina.current = Math.max(0, stamina.current - 12 * dt)
+      sprintDelay.current = 1
+      if (stamina.current <= 0) sprinting.current = false
+    } else {
+      sprinting.current = false
+      if (sprintDelay.current > 0) sprintDelay.current -= dt
+      else stamina.current = Math.min(100, stamina.current + 18 * dt)
+    }
+    if (Math.abs(useWorldUi.getState().stamina - stamina.current) > 1.5 || stamina.current === 0 || stamina.current >= 99.5) {
+      useWorldUi.setState({ stamina: stamina.current })
+    }
+    const running = sprinting.current
     const targetSpeed = moving ? (running ? RUN : WALK) : 0
     const velBlend = 1 - Math.exp(-18 * dt)
     rig.speed.current += (targetSpeed - rig.speed.current) * velBlend

@@ -4,6 +4,7 @@ import { useGame } from '../../GameState'
 import { useInteractable } from '../../InteractionSystem'
 import { LivingCrowd } from './LivingCrowd'
 import { businessOpen } from './schedule'
+import { applyMoney } from '../../world/pay'
 
 function CafeCounter() {
   const dayAct = useGame((s) => s.dayAct)
@@ -27,12 +28,12 @@ function CafeCounter() {
       }
       const buyMeal = (price: number, label: string, hunger: number) => {
         const s = useGame.getState()
-        if (s.cash + 0.001 < price) {
-          s.openDialogue({ name: 'Devon', text: 'Not enough cash for that.', options: [{ label: 'OK', close: true }] })
+        const err = applyMoney(-price, label)
+        if (err) {
+          s.openDialogue({ name: 'Dev', text: err, options: [{ label: 'Back', close: true }] })
           return
         }
         const foodId = `cafe-${s.totalMinutes}`
-        useGame.setState({ cash: Math.round((s.cash - price) * 100) / 100 })
         dayAct({
           type: 'buy-food',
           items: [{ id: foodId, kind: 'cafe-meal', label, hungerRestore: hunger, boughtAt: s.totalMinutes }],
@@ -40,24 +41,26 @@ function CafeCounter() {
         dayAct({ type: 'eat', foodId })
       }
       openDialogue({
-        name: 'Devon',
-        text: `Menu: oat latte $4.50 · breakfast sandwich $6.25 · combo $9. You have $${cash.toFixed(2)}.`,
+        name: 'Dev',
+        text: hasJob && employer === 'bean'
+          ? 'Buying food and working are separate. The shift is the ticket, the machine, then the table. Payroll runs once when you serve.'
+          : `I'm Dev. Food is separate from the job. Menu: oat latte $4.50 · sandwich $6.25 · combo $9. You have $${cash.toFixed(2)} cash, and checking is used when it can cover the bill.`,
         options: [
           { label: 'Oat latte $4.50', action: () => buyMeal(4.5, 'Oat latte', 10), close: true },
           { label: 'Sandwich $6.25', action: () => buyMeal(6.25, 'Breakfast sandwich', 22), close: true },
           { label: 'Combo $9', action: () => buyMeal(9, 'Café combo', 32), close: true },
-          ...(hasJob && employer === 'bean'
+          ...(!hasJob
             ? [
                 {
-                  label: 'Clock in for a shift',
+                  label: 'Ask about the job',
                   action: () => {
-                    const err = play({ type: 'open', activity: { kind: 'shift', employerId: 'bean' as const } })
-                    if (err) openDialogue({ name: 'Devon', text: err, options: [{ label: 'OK', close: true }] })
+                    const err = play({ type: 'open', activity: { kind: 'posting', employerId: 'bean' as const } })
+                    if (err) openDialogue({ name: 'Dev', text: err, options: [{ label: 'Back', close: true }] })
                   },
                 },
               ]
             : []),
-          { label: 'Never mind', close: true },
+          { label: 'Cancel', close: true },
         ],
       })
     },

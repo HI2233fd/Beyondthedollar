@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { currentStory } from '../world/story'
 import { useGame } from '../GameState'
 import { portfolioValue } from './investing'
 import { stampFromMinutes } from './time'
@@ -165,6 +166,9 @@ export function PhonePanel() {
         {app === 'home' && (
           <div className="phone-body">
             <LifeSummary />
+            <p className="phone-hero-sub">
+              Build Your Independent Life · {currentStory().chapter} · {currentStory().title}. {currentStory().objective}. {currentStory().destinationName}.
+            </p>
             <div className={`phone-hero ${hasJob ? 'phone-hero-ok' : ''}`}>
               <span className="hud-label">
                 {name || 'You'} · Age {age} · Lv {lifeLevel}
