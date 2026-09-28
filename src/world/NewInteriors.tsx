@@ -2,6 +2,7 @@ import { Text } from '@react-three/drei'
 import { Room, InteriorExit } from '../Interiors/Room'
 import { NPC } from '../NPC'
 import { Chair, Plant } from '../props'
+import { Bed, Counter, Fridge, Shelf, Sink, Sofa, Stove, Wardrobe } from './furniture'
 import { box } from '../collision'
 import { useGame, type Dialogue } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
@@ -20,6 +21,7 @@ function Station({
   onInteract,
   color = '#94a3b8',
   size = [1.4, 0.9, 0.8] as [number, number, number],
+  showMesh = true,
 }: {
   id: string
   scene: Parameters<typeof useInteractable>[0]['scene']
@@ -28,8 +30,10 @@ function Station({
   onInteract: () => void
   color?: string
   size?: [number, number, number]
+  showMesh?: boolean
 }) {
   useInteractable({ id, scene, position, radius: 2.1, prompt, onInteract })
+  if (!showMesh) return null
   return (
     <mesh position={[position[0], size[1] / 2, position[2]]} castShadow>
       <boxGeometry args={size} />
@@ -147,7 +151,7 @@ function leaseTalk(which: 'apartments' | 'townhouse') {
 
 export function ApartmentsInterior() {
   return (
-    <Room w={ROOM.w} d={ROOM.d} floor="#e8dfd4" wall="#f6f1ea">
+    <Room w={ROOM.w} d={ROOM.d} floor="#e8dfd4" wall="#f6f1ea" extraBoxes={[box(-6, -6, 2.1, 1.5), box(1.5, -6, 2.3, 1), box(6.4, 1.6, 2.6, 1.3)]}>
       <ResidentialBits scene="apartments" />
       <Station id="apt-lease" scene="apartments" position={[2, 0, 2]} prompt="Read the apartment lease" color="#e7e5e4" onInteract={() => leaseTalk('apartments')} />
       <InteriorExit scene="apartments" z={EXIT_Z} />
@@ -157,7 +161,7 @@ export function ApartmentsInterior() {
 
 export function TownhouseInterior() {
   return (
-    <Room w={ROOM.w} d={ROOM.d} floor="#e6dccb" wall="#f7f3ec">
+    <Room w={ROOM.w} d={ROOM.d} floor="#e6dccb" wall="#f7f3ec" extraBoxes={[box(-6, -6, 2.1, 1.5), box(1.5, -6, 2.3, 1), box(6.4, 1.6, 2.6, 1.3), box(3, 1, 2.2, 1.2)]}>
       <ResidentialBits scene="townhouse" />
       <mesh position={[3, 0.45, 1]} castShadow>
         <boxGeometry args={[2.2, 0.1, 1.2]} />
@@ -174,32 +178,20 @@ function ResidentialBits({ scene }: { scene: 'apartments' | 'townhouse' }) {
   const clothes = scene === 'townhouse' ? 'Change clothes' : 'Open your wardrobe'
   return (
     <group>
-      <mesh position={[-6, 0.4, -5]} castShadow>
-        <boxGeometry args={[2.2, 0.5, 1.4]} />
-        <meshStandardMaterial color="#e7e5e4" />
-      </mesh>
-      <mesh position={[-6, 0.7, -5.3]} castShadow>
-        <boxGeometry args={[2, 0.2, 0.5]} />
-        <meshStandardMaterial color="#f8fafc" />
-      </mesh>
-      <mesh position={[5, 0.45, -4]} castShadow>
-        <boxGeometry args={[2.4, 0.7, 1]} />
-        <meshStandardMaterial color="#64748b" />
-      </mesh>
-      <mesh position={[6.5, 0.7, 2]} castShadow>
-        <boxGeometry args={[1.2, 1.4, 0.7]} />
-        <meshStandardMaterial color="#d6d3d1" />
-      </mesh>
-      <mesh position={[-2, 0.75, 0]} castShadow>
-        <boxGeometry args={[1.2, 1.5, 0.5]} />
-        <meshStandardMaterial color="#44403c" />
-      </mesh>
+      <Bed position={[-6, 0, -6]} />
+      <Sofa position={[1.5, 0, -6.2]} />
+      <Shelf position={[-3.2, 0, -8.6]} />
+      <Wardrobe position={[-2, 0, -6]} />
+      <Fridge position={[7.4, 0, 1.1]} rotation={-Math.PI / 2} />
+      <Counter position={[6.2, 0, 2.2]} rotation={-Math.PI / 2} width={1.8} />
+      <Stove position={[6.2, 0, 3.3]} rotation={-Math.PI / 2} />
+      <Sink position={[6.2, 0, 1.5]} rotation={-Math.PI / 2} />
       <Station
         id={`${scene}-bed`}
         scene={scene}
         position={[-6, 0, -5]}
         prompt={rest}
-        color="#e7e5e4"
+        showMesh={false}
         onInteract={() => {
           const err = useGame.getState().dayAct({ type: 'sleep' })
           if (err) say('Home', err)
@@ -208,9 +200,9 @@ function ResidentialBits({ scene }: { scene: 'apartments' | 'townhouse' }) {
       <Station
         id={`${scene}-closet`}
         scene={scene}
-        position={[-2, 0, 0]}
+        position={[-2, 0, -6]}
         prompt={clothes}
-        color="#44403c"
+        showMesh={false}
         onInteract={() => openWardrobe()}
       />
       <Station
@@ -218,7 +210,7 @@ function ResidentialBits({ scene }: { scene: 'apartments' | 'townhouse' }) {
         scene={scene}
         position={[6.5, 0, 2]}
         prompt="Cook a meal"
-        color="#d6d3d1"
+        showMesh={false}
         onInteract={() => cookMeal()}
       />
       <Station id={`${scene}-plan`} scene={scene} position={[1, 0, -2]} prompt="Plan your household" color="#1e3a5f" onInteract={() => planHome()} />
@@ -380,13 +372,13 @@ export function KitchenInterior() {
           </group>
         )),
       )}
+      <Counter position={[0, 0, -6]} width={4} top="#d6d3d1" body="#7c2d12" />
       <Station
         id="kit-menu"
         scene="kitchen"
         position={[0, 0, -6]}
         prompt="View menu"
-        color="#9a3412"
-        size={[4, 1, 1]}
+        showMesh={false}
         onInteract={() => say('Carmen', MEALS.map((m) => `${m.name} $${m.price.toFixed(2)}`).join(' · '))}
       />
       <Station
@@ -502,10 +494,7 @@ export function ClinicInterior() {
   return (
     <Room w={ROOM.w} d={ROOM.d} floor="#e7e5e4" wall="#f5f5f4" extraBoxes={[box(-5, -3, 2, 1.2), box(0, -3, 2, 1.2), box(5, -3, 2, 1.2)]}>
       {[-5, 0, 5].map((x) => (
-        <mesh key={x} position={[x, 0.45, -3]} castShadow>
-          <boxGeometry args={[1.8, 0.5, 0.8]} />
-          <meshStandardMaterial color="#f8fafc" />
-        </mesh>
+        <Bed key={x} position={[x, 0, -3]} linen="#f8fafc" wood="#e7e5e4" />
       ))}
       <Station
         id="clinic-chen"
@@ -569,7 +558,9 @@ export function WorkshopInterior() {
   return (
     <Room w={ROOM.w} d={ROOM.d} floor="#d6d3d1" wall="#e7e5e4" extraBoxes={[box(-4, -4, 3, 1.2)]}>
       <Station id="shop-brief" scene="workshop" position={[-6, 0, 1]} prompt="Read the brief" color="#44403c" onInteract={() => repair(1, 'Job ticket is on the bench.')} />
-      <Station id="shop-bench" scene="workshop" position={[-4, 0, -4]} prompt="Repair workbench" color="#78716c" size={[2.4, 1, 1]} onInteract={() => repair(2, 'Part is seated. Get the review.')} />
+      <Counter position={[-4, 0, -4]} width={2.2} top="#a8a29e" body="#57534e" />
+      <Shelf position={[-8, 0, -4]} rotation={Math.PI / 2} />
+      <Station id="shop-bench" scene="workshop" position={[-4, 0, -4]} prompt="Repair workbench" showMesh={false} onInteract={() => repair(2, 'Part is seated. Get the review.')} />
       <Station id="shop-review" scene="workshop" position={[-1, 0, -2]} prompt="Supervisor review" color="#0f766e" onInteract={() => repair(3, '')} />
       <Station
         id="shop-parcel"

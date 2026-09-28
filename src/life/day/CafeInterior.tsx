@@ -1,5 +1,6 @@
 import { Room, InteriorExit } from '../../Interiors/Room'
 import { Chair, Plant, WallClock } from '../../props'
+import { Counter, EspressoMachine } from '../../world/furniture'
 import { useGame } from '../../GameState'
 import { useInteractable } from '../../InteractionSystem'
 import { LivingCrowd } from './LivingCrowd'
@@ -66,12 +67,7 @@ function CafeCounter() {
     },
   })
 
-  return (
-    <mesh position={[-1.2, 0.55, -2.6]} castShadow>
-      <boxGeometry args={[4.2, 1.1, 1.2]} />
-      <meshStandardMaterial color="#78350f" />
-    </mesh>
-  )
+  return <Counter position={[-1.2, 0, -2.6]} width={3.4} top="#e7e5e4" body="#78350f" />
 }
 
 function CafeSeat({ id, x, z }: { id: string; x: number; z: number }) {
@@ -146,10 +142,10 @@ function CafeShift() {
     },
   })
   return (
-    <mesh position={[-3.2, 0.9, -1]} castShadow>
-      <boxGeometry args={[0.8, 0.7, 0.6]} />
-      <meshStandardMaterial color="#44403c" metalness={0.4} />
-    </mesh>
+    <group position={[-3.2, 0, -1]}>
+      <Counter position={[0, 0, 0]} width={1.1} top="#a8a29e" body="#44403c" />
+      <EspressoMachine position={[0, 0.95, 0]} />
+    </group>
   )
 }
 

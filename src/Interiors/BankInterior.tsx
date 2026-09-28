@@ -3,6 +3,7 @@ import { Room, InteriorExit } from './Room'
 import { useInteractable } from '../InteractionSystem'
 import { NPC } from '../NPC'
 import { Guest, Chair, Plant, Rug, WallClock } from '../props'
+import { Counter } from '../world/furniture'
 import { box } from '../collision'
 import { LearningStation } from '../curriculum/LearningStation'
 import { KioskStation } from '../simulation/KioskStation'
@@ -196,14 +197,9 @@ export function BankInterior() {
         <meshStandardMaterial color="#cbd5e1" metalness={0.2} roughness={0.35} />
       </mesh>
 
-      <mesh position={[0, 0.6, -3.4]} castShadow>
-        <boxGeometry args={[9, 1.2, 1]} />
-        <meshStandardMaterial color="#6b4f2a" />
-      </mesh>
-      <mesh position={[0, 1.25, -3.4]}>
-        <boxGeometry args={[9, 0.1, 1.2]} />
-        <meshStandardMaterial color="#3f2d18" />
-      </mesh>
+      {[-3, 0, 3].map((x) => (
+        <Counter key={`teller-${x}`} position={[x, 0, -3.4]} width={2.4} top="#d6d3d1" body="#6b4f2a" />
+      ))}
       {/* Teller nameplates */}
       {[-3, 0, 3].map((x) => (
         <mesh key={`np${x}`} position={[x, 1.42, -2.95]}>
