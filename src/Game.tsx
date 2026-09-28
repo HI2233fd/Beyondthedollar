@@ -40,6 +40,19 @@ import { ClassSessionPanel } from './life/day/ClassSessionPanel'
 import { VehicleSystem } from './life/day/VehicleSystem'
 import { LivingCrowd } from './life/day/LivingCrowd'
 import { CafeInterior } from './life/day/CafeInterior'
+import {
+  HighInterior,
+  CommonsInterior,
+  ApartmentsInterior,
+  MotorsInterior,
+  KitchenInterior,
+  LanternInterior,
+  TownhouseInterior,
+  ClinicInterior,
+  WorkshopInterior,
+} from './world/NewInteriors'
+import { CalendarPanel, GuideBanner, MapPanel } from './world/MapPanel'
+import { useWorldUi } from './world/simStore'
 import { useGame } from './GameState'
 import { initControls } from './keyboard'
 import { CITY_START } from './cityLayout'
@@ -55,12 +68,17 @@ function SceneContent() {
       {scene === 'office' && <OfficeInterior />}
       {scene === 'home' && <HomeInterior />}
       {scene === 'cafe' && <CafeInterior />}
-      {scene === 'city' && (
-        <>
-          <VehicleSystem />
-          <LivingCrowd />
-        </>
-      )}
+      {scene === 'high' && <HighInterior />}
+      {scene === 'commons' && <CommonsInterior />}
+      {scene === 'apartments' && <ApartmentsInterior />}
+      {scene === 'motors' && <MotorsInterior />}
+      {scene === 'kitchen' && <KitchenInterior />}
+      {scene === 'lantern' && <LanternInterior />}
+      {scene === 'townhouse' && <TownhouseInterior />}
+      {scene === 'clinic' && <ClinicInterior />}
+      {scene === 'workshop' && <WorkshopInterior />}
+      {scene === 'city' && <VehicleSystem />}
+      <LivingCrowd />
     </>
   )
 }
@@ -104,9 +122,12 @@ export function Game() {
     () => ({
       groupRef,
       yaw: { current: Math.PI },
-      pitch: { current: 0.45 },
+      pitch: { current: 0.28 },
       walk: { current: 0 },
       moving: { current: false },
+      anim: { current: 'idle' },
+      speed: { current: 0 },
+      distance: { current: 5 },
     }),
     [],
   )
@@ -128,6 +149,8 @@ export function Game() {
   const classOpen = useGame((s) => s.classSessionOpen)
   const finishTransition = useGame((s) => s.finishTransition)
 
+  const mapOpen = useWorldUi((s) => s.mapOpen)
+  const calendarOpen = useWorldUi((s) => s.calendarOpen)
   const [fade, setFade] = useState(false)
   const [locked, setLocked] = useState(false)
 
@@ -159,16 +182,29 @@ export function Game() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!useGame.getState().characterCreated) return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return
       if (e.code === 'KeyO') {
         const s = useGame.getState()
         if (s.optionsOpen) s.closeOptions()
         else s.openOptions()
         return
       }
-      if (e.code !== 'KeyP' && e.code !== 'KeyM') return
-      const s = useGame.getState()
-      if (s.phoneOpen) s.closePhone()
-      else s.openPhone()
+      if (e.code === 'KeyP') {
+        const s = useGame.getState()
+        if (s.phoneOpen) s.closePhone()
+        else s.openPhone()
+        return
+      }
+      if (e.code === 'KeyM') {
+        const ui = useWorldUi.getState()
+        ui.setMap(!ui.mapOpen)
+        return
+      }
+      if (e.code === 'KeyT') {
+        const ui = useWorldUi.getState()
+        ui.setCalendar(!ui.calendarOpen)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -187,13 +223,15 @@ export function Game() {
     !!rewardPopup ||
     !!activityOpen ||
     classOpen ||
+    mapOpen ||
+    calendarOpen ||
     !characterCreated
   const showHint = characterCreated && !locked && !modalOpen
 
   return (
     <RigContext.Provider value={rig}>
       <div className="game-root">
-        <Canvas shadows camera={{ position: [-2, 4, 16], fov: 55 }} dpr={[1, 1.5]}>
+        <Canvas shadows camera={{ position: [-2, 4, 16], fov: 67 }} dpr={[1, 1.5]}>
           {scene === 'city' ? (
             <CityLighting />
           ) : (
@@ -219,6 +257,9 @@ export function Game() {
               <CurriculumHUD />
             </div>
             <Minimap />
+            <MapPanel />
+            <CalendarPanel />
+            <GuideBanner />
             <MissionTracker />
             <PaceCoach />
             <GuidePanel />
@@ -246,8 +287,9 @@ export function Game() {
 
         {showHint && (
           <div className="controls-hint">
-            <strong>Click</strong> look · <strong>WASD</strong> move · <strong>E</strong> interact ·{' '}
-            <strong>O</strong> options · <strong>P</strong> phone · <strong>ESC</strong> release
+            WASD to walk · Shift to run · E to interact · P phone · M map · T calendar
+            <br />
+            Click the world and move your mouse to look. Scroll to zoom. Esc releases the mouse.
           </div>
         )}
 

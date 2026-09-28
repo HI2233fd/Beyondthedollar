@@ -20,7 +20,7 @@ export function CityLighting() {
         turbidity={season === 'fall' ? L.skyTurbidity + 1.2 : L.skyTurbidity}
         rayleigh={L.skyRayleigh}
       />
-      <fog attach="fog" args={[seasonFog, L.fogNear, L.fogFar + (season === 'winter' ? 8 : 0)]} />
+      <fog attach="fog" args={[seasonFog, L.fogNear + 20, L.fogFar + 90]} />
       <hemisphereLight args={[L.hemiSky, L.hemiGround, L.hemiIntensity * hemiBoost]} />
       <directionalLight
         position={L.sunPosition}
@@ -28,11 +28,11 @@ export function CityLighting() {
         castShadow={L.phase !== 'night'}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-60}
-        shadow-camera-right={60}
-        shadow-camera-top={60}
-        shadow-camera-bottom={-60}
-        shadow-camera-far={140}
+        shadow-camera-left={-110}
+        shadow-camera-right={110}
+        shadow-camera-top={110}
+        shadow-camera-bottom={-110}
+        shadow-camera-far={220}
       />
       {L.ambientBoost > 0 && <ambientLight intensity={L.ambientBoost} />}
       {L.phase === 'night' && (

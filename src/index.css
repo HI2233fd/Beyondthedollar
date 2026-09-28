@@ -614,6 +614,52 @@ button.phone-row.life-concept {
   color: #cdd8e6;
   text-shadow: 0 1px 2px #000;
 }
+.minimap-dest {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 2px solid #fbbf24;
+  border-radius: 2px;
+  z-index: 2;
+}
+.map-panel, .calendar-panel {
+  position: absolute;
+  inset: 24px;
+  z-index: 30;
+  background: rgba(10, 16, 28, 0.94);
+  color: #e8eef7;
+  border-radius: 16px;
+  padding: 16px 18px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.map-head, .calendar-panel header { display: flex; justify-content: space-between; align-items: center; }
+.map-layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 12px; min-height: 0; }
+.map-canvas { position: relative; background: #1f3a2c; border-radius: 12px; min-height: 320px; }
+.map-pin, .map-poi, .map-you { position: absolute; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
+.map-pin { background: #86efac; border: 0; }
+.map-pin.on { background: #fbbf24; }
+.map-poi { background: #93c5fd; width: 7px; height: 7px; }
+.map-you { background: #fff; width: 8px; height: 8px; }
+.map-hood { position: absolute; font-size: 12px; letter-spacing: 0.04em; color: #ecfccb; }
+.map-list { overflow: auto; max-height: 60vh; display: flex; flex-direction: column; gap: 8px; }
+.map-card { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.map-card-actions, .map-people { display: flex; flex-wrap: wrap; gap: 6px; }
+.guide-banner {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 999px;
+  z-index: 12;
+  font-size: 14px;
+}
+.calendar-panel { inset: auto; right: 24px; top: 80px; width: min(360px, 90vw); }
 .minimap-player {
   position: absolute;
   width: 10px;

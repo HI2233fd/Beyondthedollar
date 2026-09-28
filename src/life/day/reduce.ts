@@ -151,11 +151,17 @@ export function reduceDay(state: DayLife, totalMinutes: number, action: DayActio
     d.drivingVehicleId = null
     notice = 'You stepped out.'
   } else if (action.type === 'park-vehicle') {
-    d.vehicles = d.vehicles.map((v) =>
-      v.id === action.vehicleId ? { ...v, x: action.x, z: action.z, yaw: action.yaw } : v,
-    )
-    d.drivingVehicleId = null
-    notice = 'Parked.'
+    if (action.vehicleId === 'testdrive') {
+      d.vehicles = d.vehicles.filter((v) => v.id !== 'testdrive')
+      d.drivingVehicleId = null
+      notice = 'Test drive ended. Nothing was purchased.'
+    } else {
+      d.vehicles = d.vehicles.map((v) =>
+        v.id === action.vehicleId ? { ...v, x: action.x, z: action.z, yaw: action.yaw } : v,
+      )
+      d.drivingVehicleId = null
+      notice = 'Parked.'
+    }
   } else if (action.type === 'add-vehicle') {
     if (!d.vehicles.some((v) => v.id === action.vehicle.id)) d.vehicles = [...d.vehicles, action.vehicle]
   } else if (action.type === 'meet-friend') {

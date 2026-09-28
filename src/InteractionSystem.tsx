@@ -62,7 +62,8 @@ export function InteractionPrompt() {
   if (!prompt || dialogue || scenario || investing || phone) return null
   return (
     <div className="interact-prompt">
-      <span className="key">E</span> {prompt}
+      <span className="key">E</span>
+      <span>· {prompt}</span>
     </div>
   )
 }

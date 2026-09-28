@@ -70,12 +70,30 @@ import {
 } from './life/types'
 import { ACHIEVEMENT_DEFS } from './life/missions'
 import { clearSave, emptyLifeDefaults, loadSave, writeSave, type SaveBlob } from './life/save'
+import { defaultWorldSim, normalizeWorldSim, type WorldSim } from './world/worldSim'
+import { useWorldUi } from './world/simStore'
 import { computeActivityOptions, type OptionContext } from './life/optionsEngine'
 import { buildGoalMilestones, syncGoalMilestonesFromState } from './life/goalChains'
 import { normalizeAppearance, type GoalMilestone, type PhoneMessage, type RewardPopup } from './life/characterLook'
 import type { ActivityOption } from './life/characterLook'
 
-export type SceneId = 'city' | 'bank' | 'grocery' | 'college' | 'office' | 'home' | 'cafe'
+export type SceneId =
+  | 'city'
+  | 'bank'
+  | 'grocery'
+  | 'college'
+  | 'office'
+  | 'home'
+  | 'cafe'
+  | 'high'
+  | 'commons'
+  | 'apartments'
+  | 'motors'
+  | 'kitchen'
+  | 'lantern'
+  | 'townhouse'
+  | 'clinic'
+  | 'workshop'
 
 export interface DialogueOption {
   label: string
@@ -153,6 +171,7 @@ interface GameState {
 
   scene: SceneId
   spawn: Spawn | null
+  worldSim: WorldSim
   transitioning: boolean
 
   prompt: string | null
@@ -257,6 +276,7 @@ interface GameState {
   classSessionOpen: boolean
   play: (action: PlayAction) => string | null
   dayAct: (action: DayAction) => string | null
+  patchWorld: (partial: Partial<WorldSim>) => void
   openClassSession: () => void
   closeClassSession: () => void
   tryEnterBusiness: (scene: SceneId, spawn: Spawn, businessId?: BusinessId) => string | null
@@ -417,6 +437,7 @@ type Persistable = ReturnType<typeof emptyLifeDefaults> & {
   carStatus: CarStatus
   homeStatus: HomeStatus
   scene: SceneId
+  worldSim: WorldSim
   financialEdu: EducationState
   lifeFacts: LifeFacts
   messages: { id: string; from: string; body: string; atTotalMinutes: number; read: boolean; opportunityId?: string }[]
@@ -481,6 +502,7 @@ function toSaveBlob(s: Persistable): SaveBlob {
     carStatus: s.carStatus,
     homeStatus: s.homeStatus,
     scene: s.scene,
+    worldSim: s.worldSim,
     financialEdu: s.financialEdu,
     lifeFacts: s.lifeFacts,
     messages: s.messages,
@@ -488,6 +510,7 @@ function toSaveBlob(s: Persistable): SaveBlob {
     leftHome: s.leftHome,
     phoneOpenedOnce: s.phoneOpenedOnce,
     dayLife: s.dayLife,
+    bindings: useWorldUi.getState().bindings,
   }
 }
 
@@ -555,6 +578,7 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
     carStatus: blob.carStatus as CarStatus,
     homeStatus: blob.homeStatus as HomeStatus,
     scene: (blob.scene as SceneId) || 'home',
+    worldSim: normalizeWorldSim(blob.worldSim),
     financialEdu: blob.financialEdu
       ? normalizeEducation(blob.financialEdu)
       : backfillEducation(initialEducation(), {
@@ -568,13 +592,20 @@ function applySaveBlob(set: (partial: Partial<GameState>) => void, blob: SaveBlo
         }),
     activeConceptId: null,
     checkpointOpen: false,
-    spawn: blob.scene === 'city' ? { pos: [0, 0, 0], yaw: Math.PI } : HOME_BEDROOM_START,
+    spawn:
+      blob.scene === 'city' || !blob.scene
+        ? { pos: [0, 0, 22], yaw: Math.PI }
+        : blob.scene === 'home'
+          ? HOME_BEDROOM_START
+          : { pos: [0, 0, 6], yaw: Math.PI },
     transitioning: true,
     phoneOpen: false,
     dialogue: null,
     prompt: null,
     lastBillNotice: `Welcome back, ${blob.playerName}`,
   })
+  useWorldUi.getState().setBindings(blob.bindings)
+  useWorldUi.getState().setGuiding(false)
 }
 
 function createGameStore(): UseGameStore {
@@ -595,6 +626,7 @@ function createGameStore(): UseGameStore {
 
   scene: 'city',
   spawn: null,
+  worldSim: defaultWorldSim(),
   transitioning: false,
 
   prompt: null,
@@ -753,6 +785,7 @@ function createGameStore(): UseGameStore {
       goalMilestones: buildGoalMilestones(goals),
       scene: 'home',
       spawn: HOME_BEDROOM_START,
+      worldSim: defaultWorldSim(),
       transitioning: true,
       dialogue: null,
       prompt: null,
@@ -1097,6 +1130,12 @@ function createGameStore(): UseGameStore {
     return null
   },
 
+  patchWorld: (partial) => {
+    const next = { ...get().worldSim, ...partial }
+    set({ worldSim: next })
+    get().autosave()
+  },
+
   dayAct: (action) => {
     const s = get()
     const result = reduceDay(s.dayLife, s.totalMinutes, action)
@@ -1125,23 +1164,24 @@ function createGameStore(): UseGameStore {
   },
 
   tryEnterBusiness: (scene, spawn, businessId) => {
-    const id = businessId ?? (scene as BusinessId)
-    if (scene !== 'home' && scene !== 'city') {
-      const closed = !businessOpen(id, get().totalMinutes)
+    if (businessId) {
+      const closed = !businessOpen(businessId, get().totalMinutes)
       if (closed) {
         const msg =
-          id === 'college'
+          businessId === 'college' || businessId === 'high'
             ? 'Campus is closed. Weekdays until mid-afternoon.'
-            : id === 'cafe'
-              ? 'Bean Street is closed right now.'
-              : id === 'bank'
-                ? 'FirstCity is closed. Weekdays 9–5.'
+            : businessId === 'cafe'
+              ? 'The café is closed right now.'
+              : businessId === 'bank'
+                ? 'The bank is closed. Weekdays 9–5.'
                 : 'This place is closed right now.'
         get().openDialogue({ name: SCENE_LOCATION[scene] ?? 'Door', text: msg, options: [{ label: 'OK', close: true }] })
         return msg
       }
     }
     get().enterScene(scene, spawn)
+    const id = BUILDING_FOR_SCENE[scene]
+    if (id) get().discoverLocation(id)
     return null
   },
 
@@ -2133,13 +2173,40 @@ function getOrCreateGameStore(): UseGameStore {
 export const useGame = getOrCreateGameStore()
 
 export const SCENE_LOCATION: Record<SceneId, string> = {
-  city: 'City Streets',
-  bank: 'FirstCity Bank',
-  grocery: 'FreshMart Grocery',
-  college: 'Merridian High',
-  office: 'Summit Office',
-  home: 'Maple Apartments',
-  cafe: 'Bean Street Café',
+  city: 'Bellwether',
+  bank: 'Bellwether Bank',
+  grocery: 'Juniper Market',
+  college: 'Bellwether College',
+  office: 'Meridian Offices',
+  home: 'Your family home',
+  cafe: 'Corner Café',
+  high: 'Bellwether High',
+  commons: 'Downtown Commons',
+  apartments: 'Juniper Apartments',
+  motors: 'Horizon Motors',
+  kitchen: 'Harbor Kitchen',
+  lantern: 'The Lantern',
+  townhouse: 'Willow Townhouse',
+  clinic: 'Community Clinic',
+  workshop: 'Foundry Workshop',
+}
+
+const BUILDING_FOR_SCENE: Partial<Record<SceneId, string>> = {
+  bank: 'bank',
+  grocery: 'grocery',
+  college: 'college',
+  office: 'office',
+  home: 'home',
+  cafe: 'cafe',
+  high: 'high',
+  commons: 'commons',
+  apartments: 'apartments',
+  motors: 'motors',
+  kitchen: 'kitchen',
+  lantern: 'lantern',
+  townhouse: 'townhouse',
+  clinic: 'clinic',
+  workshop: 'workshop',
 }
 
 export function processDueBillsAsScenarios() {

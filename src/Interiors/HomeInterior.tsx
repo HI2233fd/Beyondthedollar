@@ -7,6 +7,7 @@ import { useGame, type Dialogue } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { LIFE_GOALS } from '../life/types'
 import { OUTFIT_CATALOG } from '../life/day/types'
+import { handNeighborHome } from '../world/deliver'
 
 function BedRest() {
   useInteractable({
@@ -14,7 +15,7 @@ function BedRest() {
     scene: 'home',
     position: [-4.4, 0, -3],
     radius: 2.2,
-    prompt: 'Sleep until 7:00',
+    prompt: 'Rest in your bedroom',
     onInteract: () => {
       const err = useGame.getState().dayAct({ type: 'sleep' })
       if (err) useGame.getState().openDialogue({ name: 'Apartment', text: err, options: [{ label: 'OK', close: true }] })
@@ -29,7 +30,7 @@ function Fridge() {
     scene: 'home',
     position: [5.2, 0, 1.5],
     radius: 2,
-    prompt: 'Open fridge',
+    prompt: 'Cook a meal',
     onInteract: () => {
       const s = useGame.getState()
       const pantry = s.dayLife.pantry
@@ -64,7 +65,7 @@ function Closet() {
     scene: 'home',
     position: [-5.8, 0, -0.8],
     radius: 2,
-    prompt: 'Change clothes',
+    prompt: 'Open your wardrobe',
     onInteract: () => {
       const s = useGame.getState()
       const owned = s.dayLife.outfits
@@ -138,7 +139,7 @@ function DeskComputer() {
     scene: 'home',
     position: [-2.2, 0, -1.4],
     radius: 1.8,
-    prompt: 'Use computer',
+    prompt: 'Use your laptop',
     onInteract: () => {
       useGame.getState().openDialogue({
         name: 'Laptop',
@@ -160,9 +161,10 @@ function MailSlot() {
     scene: 'home',
     position: [0.2, 0, 5],
     radius: 1.8,
-    prompt: 'Check mail',
+    prompt: 'Check your mail',
     onInteract: () => {
       const s = useGame.getState()
+      if (handNeighborHome()) return
       const rent = s.recurringBills.find((b) => b.category === 'rent')
       s.openDialogue({
         name: 'Mail',
@@ -234,6 +236,40 @@ function homeDialogue(): Dialogue {
 }
 
 /** Starter home — bedroom + living room with usable furniture. */
+function HomeExtras() {
+  useInteractable({
+    id: 'home-plan',
+    scene: 'home',
+    position: [0.5, 0, 1.2],
+    radius: 1.6,
+    prompt: 'Plan your household',
+    onInteract: () => {
+      const s = useGame.getState()
+      const rent = s.recurringBills.find((b) => b.category === 'rent')
+      s.openDialogue({
+        name: 'Household',
+        text: rent ? `Rent of $${rent.amount} is on the calendar. Pay it from the phone when it is due.` : 'No housing bill yet.',
+        options: [{ label: 'OK', close: true }],
+      })
+    },
+  })
+  useInteractable({
+    id: 'home-decor',
+    scene: 'home',
+    position: [4.2, 0, 1.5],
+    radius: 1.6,
+    prompt: 'Decorate or manage home',
+    onInteract: () => {
+      useGame.getState().openDialogue({
+        name: 'Home',
+        text: 'You straighten the room. Decorating does not change the lease.',
+        options: [{ label: 'OK', close: true }],
+      })
+    },
+  })
+  return null
+}
+
 export function HomeInterior() {
   return (
     <Room w={14} d={12} floor="#d6cfc4" wall="#f3efe8">
@@ -322,6 +358,20 @@ export function HomeInterior() {
         color="#1e3a5f"
         emissive="#93c5fd"
         onOpen={() => useGame.getState().openHomeDealScenario()}
+      />
+      <HomeExtras />
+      <NPC
+        id="home-mom"
+        scene="home"
+        position={[-1.2, 0, 2.4]}
+        name="Mom"
+        shirt="#f59e0b"
+        pants="#44403c"
+        getDialogue={() => ({
+          name: 'Mom',
+          text: 'Dinner is whenever you cook it. Rent still shows up whether the place looks decorated.',
+          options: [{ label: 'OK', close: true }],
+        })}
       />
       <InteriorExit scene="home" />
     </Room>

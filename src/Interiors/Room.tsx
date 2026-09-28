@@ -113,27 +113,29 @@ export function Room({
   )
 }
 
-export function InteriorExit({ scene }: { scene: SceneId }) {
+export function InteriorExit({ scene, z = 5.3 }: { scene: SceneId; z?: number }) {
   const enterScene = useGame((s) => s.enterScene)
-  const building = BUILDINGS.find((b) => b.scene === scene)!
+  const building = BUILDINGS.find((b) => b.scene === scene)
+  const hood = building?.neighborhood ?? 'Bellwether'
   useInteractable({
     id: `exit-${scene}`,
     scene,
-    position: [0, 0, 5.3],
-    radius: 3,
-    prompt: 'Exit to street',
-    onInteract: () => enterScene('city', exitSpawn(building)),
+    position: [0, 0, z],
+    radius: 2.4,
+    prompt: `Return to ${hood}`,
+    onInteract: () => {
+      if (!building) return
+      enterScene('city', exitSpawn(building))
+    },
   })
   return (
     <group>
-      {/* Glowing exit mat on the floor by the doorway */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 5.3]}>
-        <planeGeometry args={[2.6, 2.2]} />
-        <meshStandardMaterial color="#34d399" emissive="#34d399" emissiveIntensity={0.5} transparent opacity={0.5} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, z]}>
+        <planeGeometry args={[2.2, 1.6]} />
+        <meshStandardMaterial color="#34d399" emissive="#34d399" emissiveIntensity={0.45} transparent opacity={0.55} />
       </mesh>
-      {/* EXIT sign above the doorway */}
-      <Text position={[0, 3.1, 6.2]} rotation={[0, Math.PI, 0]} fontSize={0.5} color="#34d399" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#05221a">
-        EXIT ↓
+      <Text position={[0, 3.05, z + 0.4]} rotation={[0, Math.PI, 0]} fontSize={0.42} color="#34d399" anchorX="center" anchorY="middle" outlineWidth={0.02} outlineColor="#05221a">
+        EXIT
       </Text>
     </group>
   )

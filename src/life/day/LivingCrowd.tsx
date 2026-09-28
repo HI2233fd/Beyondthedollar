@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Billboard, Text } from '@react-three/drei'
 import type { Group } from 'three'
 import { Humanoid } from '../../Humanoid'
 import { useGame, type Dialogue, type SceneId } from '../../GameState'
 import { useInteractable } from '../../InteractionSystem'
 import { CAMPUS_NPCS, CITY_WORKERS, npcAt, type LivingNpcDef } from './schedule'
+import { EXTRA_RESIDENTS } from '../../world/residents'
 
 function ScheduledOne({ def }: { def: LivingNpcDef }) {
   const totalMinutes = useGame((s) => s.totalMinutes)
@@ -89,24 +89,13 @@ function ScheduledOne({ def }: { def: LivingNpcDef }) {
 
   return (
     <group ref={group} position={[target.x, 0, target.z]}>
-      <Humanoid shirt={def.shirt} pants={def.pants} hair={def.hair} skin={def.skin} walkRef={walk} movingRef={moving} />
-      <Billboard position={[0, 2.3, 0]}>
-        <Text fontSize={0.26} color="#fff" anchorX="center" outlineWidth={0.01} outlineColor="#0b0f19">
-          {def.name}
-        </Text>
-      </Billboard>
+      <Humanoid shirt={def.shirt} pants={def.pants} hair={def.hair} skin={def.skin} walkRef={walk} movingRef={moving} anim={target.sit ? 'sit' : undefined} />
     </group>
   )
 }
 
 export function LivingCrowd() {
-  const scene = useGame((s) => s.scene)
-  const list = useMemo(() => {
-    if (scene === 'college') return CAMPUS_NPCS
-    if (scene === 'cafe') return CITY_WORKERS
-    if (scene === 'city') return [...CAMPUS_NPCS.filter((n) => n.role === 'friend' || n.role === 'student'), ...CITY_WORKERS]
-    return []
-  }, [scene])
+  const list = useMemo(() => [...CAMPUS_NPCS, ...CITY_WORKERS, ...EXTRA_RESIDENTS], [])
 
   return (
     <>

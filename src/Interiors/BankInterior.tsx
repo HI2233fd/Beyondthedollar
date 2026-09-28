@@ -1,4 +1,6 @@
+import { Text } from '@react-three/drei'
 import { Room, InteriorExit } from './Room'
+import { useInteractable } from '../InteractionSystem'
 import { NPC } from '../NPC'
 import { Guest, Chair, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
@@ -13,7 +15,7 @@ function bankDialogue(): Dialogue {
 
   if (!g.hasCheckingAccount || (g.lifeFacts.bankPlanId == null && !g.lifeFacts.legacyBank)) {
     return {
-      name: 'Bank Teller — Marcus',
+      name: 'Jordan',
       text: 'First time? I can show you three checking products. I will not pick one for you — the fees and overdraft rules become yours.',
       options: [
         {
@@ -37,7 +39,7 @@ function bankDialogue(): Dialogue {
         label: 'Move $100 into savings',
         action: () => useGame.getState().openSavings(100),
         next: {
-          name: 'Bank Teller — Marcus',
+          name: 'Jordan',
           text: 'If you had funds, they’re in savings now. A cushion comes before investing.',
           options: [leave],
         },
@@ -46,7 +48,7 @@ function bankDialogue(): Dialogue {
         label: 'Deposit $50 cash → checking',
         action: () => useGame.getState().deposit(50),
         next: {
-          name: 'Bank Teller — Marcus',
+          name: 'Jordan',
           text: 'Deposit complete (if you had the cash).',
           options: [leave],
         },
@@ -55,7 +57,7 @@ function bankDialogue(): Dialogue {
         label: 'Withdraw $50 cash',
         action: () => useGame.getState().withdraw(50),
         next: {
-          name: 'Bank Teller — Marcus',
+          name: 'Jordan',
           text: 'Here’s cash from checking (if available).',
           options: [leave],
         },
@@ -66,7 +68,7 @@ function bankDialogue(): Dialogue {
           const msg = useGame.getState().applyForCreditCard()
           useGame.setState({
             dialogue: {
-              name: 'Bank Teller — Marcus',
+              name: 'Jordan',
               text: msg
                 ? msg
                 : `Approved. Card on file. Products need score ≥ ${CREDIT_PRODUCT_MIN} — you cleared it.`,
@@ -78,7 +80,7 @@ function bankDialogue(): Dialogue {
       {
         label: 'Ask about investing',
         next: {
-          name: 'Bank Teller — Marcus',
+          name: 'Jordan',
           text: `Investing unlocks after about $${INVEST_SAVINGS_MIN} in savings. Build that cushion, then use the INVEST desk.`,
           options: [leave],
         },
@@ -86,6 +88,94 @@ function bankDialogue(): Dialogue {
       leave,
     ],
   }
+}
+
+function BankCounters() {
+  const hasChecking = useGame((s) => s.hasCheckingAccount)
+  useInteractable({
+    id: 'bank-open',
+    scene: 'bank',
+    position: [-3, 0, -2.2],
+    radius: 1.6,
+    prompt: hasChecking ? 'Talk to Jordan' : 'Open checking account',
+    onInteract: () => {
+      if (useGame.getState().hasCheckingAccount) {
+        useGame.getState().openDialogue({ name: 'Jordan', text: 'Checking is already open. Use the other windows for deposits, withdrawals, and transfers.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      useGame.getState().play({ type: 'open', activity: { kind: 'bank' } })
+    },
+  })
+  useInteractable({
+    id: 'bank-dep',
+    scene: 'bank',
+    position: [-1, 0, -2.2],
+    radius: hasChecking ? 1.6 : 0.2,
+    prompt: 'Deposit money',
+    onInteract: () => {
+      const err = useGame.getState().deposit(50)
+      useGame.getState().openDialogue({ name: 'Jordan', text: err ?? 'Deposited $50 from cash into checking.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'bank-with',
+    scene: 'bank',
+    position: [1, 0, -2.2],
+    radius: hasChecking ? 1.6 : 0.2,
+    prompt: 'Withdraw money',
+    onInteract: () => {
+      const err = useGame.getState().withdraw(50)
+      useGame.getState().openDialogue({ name: 'Jordan', text: err ?? 'Withdrew $50 from checking.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'bank-xfer',
+    scene: 'bank',
+    position: [3, 0, -2.2],
+    radius: hasChecking ? 1.6 : 0.2,
+    prompt: 'Transfer money',
+    onInteract: () => {
+      const err = useGame.getState().transferToSavings(50)
+      useGame.getState().openDialogue({ name: 'Jordan', text: err ?? 'Moved $50 from checking into savings.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'bank-atm',
+    scene: 'bank',
+    position: [-6.7, 0, 3.4],
+    radius: 1.8,
+    prompt: 'Use the ATM',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (!s.hasCheckingAccount) {
+        s.openDialogue({ name: 'ATM', text: 'The ATM needs an open checking account.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.openDialogue({
+        name: 'ATM',
+        text: `Checking $${s.bank.toFixed(2)}. Savings $${s.savings.toFixed(2)}. Cash $${s.cash.toFixed(2)}.`,
+        options: [
+          { label: 'Deposit $20', action: () => useGame.getState().deposit(20), close: true },
+          { label: 'Withdraw $20', action: () => useGame.getState().withdraw(20), close: true },
+          { label: 'Cancel', close: true },
+        ],
+      })
+    },
+  })
+  useInteractable({
+    id: 'bank-ledger',
+    scene: 'bank',
+    position: [5.2, 0, 1],
+    radius: 1.8,
+    prompt: hasChecking ? 'View transactions' : 'Talk to Jordan',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (!s.hasCheckingAccount) return
+      const lines = s.ledger.slice(0, 4).map((e) => `${e.label} ${e.amount >= 0 ? '+' : ''}${e.amount.toFixed(2)}`).join('\n') || 'No transactions yet.'
+      s.openDialogue({ name: 'Jordan', text: lines, options: [{ label: 'OK', close: true }] })
+    },
+  })
+  return null
 }
 
 export function BankInterior() {
@@ -136,8 +226,11 @@ export function BankInterior() {
 
       <mesh position={[0, 3, -6.3]}>
         <boxGeometry args={[10, 1.4, 0.1]} />
-        <meshStandardMaterial color="#0ea5e9" emissive="#0369a1" emissiveIntensity={0.3} />
+        <meshStandardMaterial color="#0f766e" emissive="#0f766e" emissiveIntensity={0.25} />
       </mesh>
+      <Text position={[0, 3, -6.2]} fontSize={0.28} color="#ecfeff" anchorX="center">
+        CHECKING · SAVINGS · A FRESH START
+      </Text>
       <WallClock position={[6.4, 3.2, -6.24]} />
 
       <group position={[-6.7, 0, 3.4]}>
@@ -182,19 +275,20 @@ export function BankInterior() {
         scene="bank"
         position={[2.5, 0, -2.4]}
         rotation={0}
-        name="Marcus"
+        name="Jordan"
         shirt="#0f766e"
         pants="#1f2937"
         getDialogue={bankDialogue}
       />
 
+      <BankCounters />
       <LearningStation buildingId="bank" scene="bank" position={[-6.5, 0, -1.2]} />
       <KioskStation
         id="bank-invest"
         scene="bank"
         position={[5.8, 0, 2.4]}
         label="INVEST"
-        prompt="Open invest desk"
+        prompt="Investments and credit"
         color="#0f766e"
         emissive="#34d399"
         onOpen={() => useGame.getState().openInvestingPanel()}

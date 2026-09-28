@@ -4,6 +4,7 @@ import { Chair, Guest, Plant, Rug, WallClock } from '../props'
 import { box } from '../collision'
 import { useGame, type Dialogue, type DialogueOption } from '../GameState'
 import { LearningStation } from '../curriculum/LearningStation'
+import { useInteractable } from '../InteractionSystem'
 import { stampFromMinutes } from '../simulation/time'
 import {
   OFFICE_HOURS_PER_WEEK,
@@ -102,6 +103,61 @@ function officeDialogue(): Dialogue {
       leave,
     ],
   }
+}
+
+function OfficeShift() {
+  const gate = (need: number, next: number, line: string, done?: () => void) => {
+    const s = useGame.getState()
+    if (s.worldSim.officeStep < need) {
+      s.openDialogue({ name: 'Diane', text: 'Order is brief, workstation, review, then reception.', options: [{ label: 'OK', close: true }] })
+      return
+    }
+    s.patchWorld({ officeStep: next })
+    if (done) done()
+    else s.openDialogue({ name: 'Diane', text: line, options: [{ label: 'OK', close: true }] })
+  }
+  useInteractable({
+    id: 'off-brief',
+    scene: 'office',
+    position: [-4, 0, -2],
+    radius: 1.7,
+    prompt: 'Read the brief',
+    onInteract: () => gate(0, 1, 'Brief is on the desk. Use a workstation next.'),
+  })
+  useInteractable({
+    id: 'off-desk',
+    scene: 'office',
+    position: [0, 0, -2],
+    radius: 1.7,
+    prompt: 'Use workstation',
+    onInteract: () => gate(1, 2, 'Draft is saved. Diane reviews it.'),
+  })
+  useInteractable({
+    id: 'off-review',
+    scene: 'office',
+    position: [0, 0, 2],
+    radius: 1.7,
+    prompt: 'Supervisor review',
+    onInteract: () =>
+      gate(2, 3, 'Reviewed.', () => {
+        const s = useGame.getState()
+        if (s.hasJob && s.lifeFacts.employerId === 'summit') {
+          const err = s.play({ type: 'shift', employerId: 'summit', accuracy: 1 })
+          if (err) s.openDialogue({ name: 'Diane', text: err, options: [{ label: 'OK', close: true }] })
+        } else {
+          s.openDialogue({ name: 'Diane', text: 'Reviewed. Payroll runs when you are on the Summit schedule. Deliver the folder to reception.', options: [{ label: 'OK', close: true }] })
+        }
+      }),
+  })
+  useInteractable({
+    id: 'off-reception',
+    scene: 'office',
+    position: [0, 0, 5],
+    radius: 1.7,
+    prompt: 'Deliver to reception',
+    onInteract: () => gate(3, 0, 'Reception has the folder.'),
+  })
+  return null
 }
 
 export function OfficeInterior() {
@@ -206,6 +262,7 @@ export function OfficeInterior() {
         getDialogue={officeDialogue}
       />
 
+      <OfficeShift />
       <LearningStation buildingId="office" scene="office" position={[-5.0, 0, 2.2]} />
       <InteriorExit scene="office" />
     </Room>

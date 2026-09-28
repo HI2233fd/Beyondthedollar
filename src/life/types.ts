@@ -19,10 +19,14 @@ export interface LifeGoalDef {
   icon: string
 }
 
+export type HairStyleId = 'side-part' | 'buzz' | 'long' | 'buns' | 'short' | 'medium' | 'bun' | 'fade'
+export type OutfitStyleId = 'casual' | 'athletic' | 'professional'
+export type HeightId = 'short' | 'average' | 'tall'
+
 export interface CharacterAppearance {
   skin: string
   hair: string
-  hairStyle?: 'short' | 'medium' | 'long' | 'bun' | 'fade'
+  hairStyle?: HairStyleId
   shirt: string
   pants: string
   shoes?: string
@@ -32,6 +36,9 @@ export interface CharacterAppearance {
   brow?: 'soft' | 'strong' | 'arched'
   body: 'slim' | 'average' | 'athletic' | 'plus'
   accessory?: 'none' | 'glasses' | 'hat' | 'earrings'
+  /** Clothing cut. Separate from the older body-shape field. */
+  style?: OutfitStyleId
+  height?: HeightId
 }
 
 export type SkillId =
@@ -142,18 +149,20 @@ export const LIFE_GOALS: LifeGoalDef[] = [
 ]
 
 export const DEFAULT_APPEARANCE: CharacterAppearance = {
-  skin: '#d0996b',
-  hair: '#241a12',
-  hairStyle: 'short',
-  shirt: '#2563eb',
-  pants: '#1f2937',
-  shoes: '#111827',
+  skin: '#d6a47b',
+  hair: '#30241e',
+  hairStyle: 'side-part',
+  shirt: '#527bc4',
+  pants: '#334b65',
+  shoes: '#e4e1d7',
   jacket: null,
   face: 'soft',
   eyeColor: '#2c1810',
   brow: 'soft',
   body: 'average',
   accessory: 'none',
+  style: 'casual',
+  height: 'average',
 }
 
 export const DEFAULT_SKILLS: Skills = {

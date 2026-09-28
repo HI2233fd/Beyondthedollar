@@ -1,330 +1,215 @@
 import { useEffect, useMemo } from 'react'
+import { Text } from '@react-three/drei'
 import { Building } from './Buildings/Building'
-import { Car, Streetlight, Tree, Pedestrian, Bench, Mailbox, Planter, TrafficCar } from './props'
-import { BUILDINGS, cityCollision, WORLD } from './cityLayout'
-import { box } from './collision'
+import { Streetlight, Tree, Bench, Planter } from './props'
+import { BACKGROUND, BUILDINGS, POIS, ROAD_HALF, ROADS_EW, ROADS_NS, WORLD, cityCollision } from './cityLayout'
 import { setActiveBoxes } from './world'
 import { useGame } from './GameState'
 import { dayPhase, stampFromMinutes } from './simulation/time'
 import { DowntownDistrict } from './life/DowntownDistrict'
 import { DowntownTeaser } from './life/DowntownTeaser'
 import { useInteractable } from './InteractionSystem'
-
-const ROAD_HALF = 4.5
-const SIDEWALK_OUTER = 8
-const NS_ROAD_HALF = 4.0
-
-const PARKED_CARS: { x: number; z: number; color: string; rot?: number }[] = [
-  // East-west curb — leave the center intersection clear for spawn/walking
-  { x: -48, z: -3.5, color: '#c0392b' },
-  { x: -34, z: -3.5, color: '#2c3e50' },
-  { x: -20, z: -3.5, color: '#ecf0f1' },
-  { x: 20, z: -3.5, color: '#7f8c8d' },
-  { x: 34, z: -3.5, color: '#2980b9' },
-  { x: 48, z: -3.5, color: '#27ae60' },
-  { x: -48, z: 3.5, color: '#34495e' },
-  { x: -34, z: 3.5, color: '#8e44ad' },
-  { x: -20, z: 3.5, color: '#16a085' },
-  { x: 20, z: 3.5, color: '#d35400' },
-  { x: 34, z: 3.5, color: '#c0392b' },
-  { x: 48, z: 3.5, color: '#2c3e50' },
-  // north-south curb (away from z=0 intersection)
-  { x: -3.4, z: -34, color: '#1abc9c', rot: 0 },
-  { x: 3.4, z: -22, color: '#9b59b6', rot: 0 },
-  { x: -3.4, z: 22, color: '#e67e22', rot: 0 },
-  { x: 3.4, z: 34, color: '#3498db', rot: 0 },
-]
+import { OutdoorLife } from './world/Outdoor'
+import { Traffic } from './world/Traffic'
 
 function HelpWanted() {
   useInteractable({
     id: 'bean-board',
     scene: 'city',
-    position: [-18, 0, 7.2],
-    radius: 2.4,
-    prompt: 'Bean Street Café — Help Wanted',
+    position: [-13, 0, -6],
+    radius: 2.2,
+    prompt: 'Read the café hiring note',
     onInteract: () => {
       const s = useGame.getState()
       const app = s.lifeFacts.apps.bean
       if (s.hasJob && s.lifeFacts.employerId === 'bean') {
-        if (s.lifeFacts.shiftsTotal >= 1 && !s.lifeFacts.workplaceDone) {
-          s.play({ type: 'open', activity: { kind: 'workplace' } })
-          return
-        }
-        if (s.lifeFacts.shiftsTotal >= 2 && !s.lifeFacts.reviewDone) {
-          s.play({ type: 'open', activity: { kind: 'review' } })
-          return
-        }
-        s.enterScene('cafe', { pos: [0, 0, 2.2], yaw: Math.PI })
+        s.enterScene('cafe', { pos: [0, 0, 3.2], yaw: Math.PI })
         return
       }
       if (app?.status === 'scheduled') {
         const err = s.play({ type: 'open', activity: { kind: 'interview', employerId: 'bean' } })
-        if (err) s.openDialogue({ name: 'Bean Street', text: err, options: [{ label: 'OK', close: true }] })
+        if (err) s.openDialogue({ name: 'Corner Café', text: err, options: [{ label: 'OK', close: true }] })
         return
       }
       s.play({ type: 'open', activity: { kind: 'posting', employerId: 'bean' } })
     },
   })
   return (
-    <group position={[-18, 0, 7.2]}>
+    <group position={[-13, 0, -6]}>
       <mesh position={[0, 1.3, 0]} castShadow>
-        <boxGeometry args={[0.12, 2.4, 0.12]} />
+        <boxGeometry args={[0.12, 2.2, 0.12]} />
         <meshStandardMaterial color="#44403c" />
       </mesh>
-      <mesh position={[0, 2.15, 0.08]} castShadow>
-        <boxGeometry args={[1.5, 0.9, 0.06]} />
+      <mesh position={[0, 2.1, 0.08]}>
+        <boxGeometry args={[1.4, 0.8, 0.06]} />
         <meshStandardMaterial color="#fef3c7" />
-      </mesh>
-      <mesh position={[0, 2.15, 0.12]}>
-        <boxGeometry args={[1.35, 0.22, 0.02]} />
-        <meshStandardMaterial color="#b45309" />
       </mesh>
     </group>
   )
 }
 
-export function City() {
-  const totalMinutes = useGame((s) => s.totalMinutes)
-  const night = dayPhase(stampFromMinutes(totalMinutes).minuteOfDay) === 'night'
-
-  useEffect(() => {
-    const carBoxes = PARKED_CARS.map((c) =>
-      c.rot === 0 ? box(c.x, c.z, 2.0, 4.4) : box(c.x, c.z, 4.4, 2.0),
-    )
-    setActiveBoxes([...cityCollision(), ...carBoxes])
-  }, [])
-
-  const ewDashes = useMemo(() => {
-    const arr: number[] = []
-    for (let x = WORLD.minX + 2; x < WORLD.maxX; x += 4) arr.push(x)
-    return arr
-  }, [])
-
-  const nsDashes = useMemo(() => {
-    const arr: number[] = []
-    for (let z = WORLD.minZ + 2; z < WORLD.maxZ; z += 4) arr.push(z)
-    return arr
-  }, [])
-
-  const streetProps = useMemo(() => {
-    const lights: { x: number; z: number }[] = []
-    const trees: { x: number; z: number }[] = []
-    const benches: { x: number; z: number; rot: number }[] = []
-    const mailboxes: { x: number; z: number }[] = []
-    const planters: { x: number; z: number }[] = []
-    for (let x = WORLD.minX + 6; x <= WORLD.maxX - 6; x += 14) {
-      lights.push({ x, z: -SIDEWALK_OUTER + 0.6 })
-      lights.push({ x: x + 7, z: SIDEWALK_OUTER - 0.6 })
-      trees.push({ x: x + 3, z: -SIDEWALK_OUTER - 2.5 })
-      trees.push({ x: x + 5, z: SIDEWALK_OUTER + 2.5 })
-      benches.push({ x: x + 1, z: -SIDEWALK_OUTER + 1.4, rot: 0 })
-      benches.push({ x: x + 5, z: SIDEWALK_OUTER - 1.4, rot: Math.PI })
-      planters.push({ x: x + 8, z: -SIDEWALK_OUTER + 1.1 })
-      planters.push({ x: x + 2, z: SIDEWALK_OUTER - 1.1 })
+function RoadGrid() {
+  const worldW = WORLD.maxX - WORLD.minX
+  const worldD = WORLD.maxZ - WORLD.minZ
+  const dashes = useMemo(() => {
+    const ew: { x: number; z: number }[] = []
+    const ns: { x: number; z: number }[] = []
+    for (const z of ROADS_EW) {
+      for (let x = WORLD.minX + 4; x < WORLD.maxX; x += 6) ew.push({ x, z })
     }
-    for (let z = WORLD.minZ + 8; z <= WORLD.maxZ - 8; z += 14) {
-      lights.push({ x: -NS_ROAD_HALF - 3.2, z })
-      lights.push({ x: NS_ROAD_HALF + 3.2, z: z + 7 })
-      trees.push({ x: -NS_ROAD_HALF - 5, z: z + 2 })
-      trees.push({ x: NS_ROAD_HALF + 5, z: z + 4 })
-      mailboxes.push({ x: NS_ROAD_HALF + 3.6, z: z + 1 })
+    for (const x of ROADS_NS) {
+      for (let z = WORLD.minZ + 4; z < WORLD.maxZ; z += 6) ns.push({ x, z })
     }
-    // pocket parks / corner greens
-    for (const p of [
-      [-48, -34],
-      [48, -34],
-      [-48, 34],
-      [48, 34],
-      [-50, 0],
-      [50, 0],
-    ] as [number, number][]) {
-      trees.push({ x: p[0], z: p[1] })
-      trees.push({ x: p[0] + 3, z: p[1] + 2 })
-      planters.push({ x: p[0] + 1.5, z: p[1] - 1.5 })
-    }
-    return { lights, trees, benches, mailboxes, planters }
+    return { ew, ns }
   }, [])
-
-  const worldW = WORLD.maxX - WORLD.minX + 4
-  const worldD = WORLD.maxZ - WORLD.minZ + 4
-
   return (
     <group>
-      {/* Grass base with slight tone variation patches */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]} receiveShadow>
-        <planeGeometry args={[worldW + 24, worldD + 24]} />
-        <meshStandardMaterial color="#3f5e3a" roughness={1} />
+        <planeGeometry args={[worldW + 8, worldD + 8]} />
+        <meshStandardMaterial color="#3f5e3a" />
       </mesh>
-      {[
-        [-40, -28],
-        [36, 30],
-        [-28, 32],
-        [42, -26],
-      ].map(([x, z], i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[x, -0.015, z]} receiveShadow>
-          <circleGeometry args={[6 + (i % 3), 16]} />
-          <meshStandardMaterial color={i % 2 ? '#4a6e42' : '#355434'} roughness={1} />
-        </mesh>
-      ))}
-
-      {/* East-west avenue */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[worldW, ROAD_HALF * 2]} />
-        <meshStandardMaterial color="#2a2d33" roughness={0.95} />
-      </mesh>
-
-      {/* North-south cross street */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]} receiveShadow>
-        <planeGeometry args={[NS_ROAD_HALF * 2, worldD]} />
-        <meshStandardMaterial color="#2a2d33" roughness={0.95} />
-      </mesh>
-
-      {/* EW sidewalks */}
-      {[-1, 1].map((s) => (
-        <mesh
-          key={`ew-sw-${s}`}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[0, 0.01, s * (ROAD_HALF + (SIDEWALK_OUTER - ROAD_HALF) / 2)]}
-          receiveShadow
-        >
-          <planeGeometry args={[worldW, SIDEWALK_OUTER - ROAD_HALF]} />
-          <meshStandardMaterial color="#9aa0a8" roughness={0.9} />
-        </mesh>
-      ))}
-
-      {/* NS sidewalks */}
-      {[-1, 1].map((s) => (
-        <mesh
-          key={`ns-sw-${s}`}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[s * (NS_ROAD_HALF + 2.2), 0.012, 0]}
-          receiveShadow
-        >
-          <planeGeometry args={[3.2, worldD]} />
-          <meshStandardMaterial color="#9aa0a8" roughness={0.9} />
-        </mesh>
-      ))}
-
-      {/* Curbs EW */}
-      {[-1, 1].map((s) => (
-        <mesh key={`ew-curb-${s}`} position={[0, 0.08, s * ROAD_HALF]}>
-          <boxGeometry args={[worldW, 0.16, 0.2]} />
-          <meshStandardMaterial color="#c7ccd2" />
-        </mesh>
-      ))}
-      {/* Curbs NS */}
-      {[-1, 1].map((s) => (
-        <mesh key={`ns-curb-${s}`} position={[s * NS_ROAD_HALF, 0.08, 0]}>
-          <boxGeometry args={[0.2, 0.16, worldD]} />
-          <meshStandardMaterial color="#c7ccd2" />
-        </mesh>
-      ))}
-
-      {/* Center dashed lines */}
-      {ewDashes.map((x) => (
-        <mesh key={`ewd-${x}`} rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, 0]}>
-          <planeGeometry args={[2, 0.18]} />
-          <meshStandardMaterial color="#e9d27a" />
-        </mesh>
-      ))}
-      {nsDashes.map((z) => (
-        <mesh key={`nsd-${z}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.021, z]}>
-          <planeGeometry args={[0.18, 2]} />
-          <meshStandardMaterial color="#e9d27a" />
-        </mesh>
-      ))}
-
-      {/* Crosswalks near enterable buildings */}
-      {BUILDINGS.filter((b) => b.enterable).map((b) => (
-        <group key={b.id}>
-          {[-1.2, -0.6, 0, 0.6, 1.2].map((o) => (
-            <mesh
-              key={o}
-              rotation={[-Math.PI / 2, 0, 0]}
-              position={[b.x + o, 0.02, b.z + b.facing * (b.d / 2 + 2.2)]}
-            >
-              <planeGeometry args={[0.4, 3.2]} />
-              <meshStandardMaterial color="#dfe3e8" />
+      {ROADS_EW.map((z) => (
+        <group key={`ew${z}`}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, z]} receiveShadow>
+            <planeGeometry args={[worldW, ROAD_HALF * 2]} />
+            <meshStandardMaterial color="#2a2d33" />
+          </mesh>
+          {[-1, 1].map((s) => (
+            <mesh key={s} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, z + s * (ROAD_HALF + 1.6)]}>
+              <planeGeometry args={[worldW, 2.4]} />
+              <meshStandardMaterial color="#b6bcc4" />
             </mesh>
           ))}
         </group>
       ))}
-
-      {/* Intersection crosswalks */}
-      {[-1.2, -0.6, 0, 0.6, 1.2].map((o) => (
-        <mesh key={`ix-n-${o}`} rotation={[-Math.PI / 2, 0, 0]} position={[o, 0.022, -6]}>
-          <planeGeometry args={[0.4, 3.5]} />
-          <meshStandardMaterial color="#dfe3e8" />
+      {ROADS_NS.map((x) => (
+        <group key={`ns${x}`}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.003, 0]} receiveShadow>
+            <planeGeometry args={[ROAD_HALF * 2, worldD]} />
+            <meshStandardMaterial color="#2a2d33" />
+          </mesh>
+          {[-1, 1].map((s) => (
+            <mesh key={s} rotation={[-Math.PI / 2, 0, 0]} position={[x + s * (ROAD_HALF + 1.6), 0.012, 0]}>
+              <planeGeometry args={[2.4, worldD]} />
+              <meshStandardMaterial color="#b6bcc4" />
+            </mesh>
+          ))}
+        </group>
+      ))}
+      {dashes.ew.map((d, i) => (
+        <mesh key={`d${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[d.x, 0.02, d.z]}>
+          <planeGeometry args={[2, 0.15]} />
+          <meshStandardMaterial color="#e9d27a" />
         </mesh>
       ))}
-      {[-1.2, -0.6, 0, 0.6, 1.2].map((o) => (
-        <mesh key={`ix-s-${o}`} rotation={[-Math.PI / 2, 0, 0]} position={[o, 0.022, 6]}>
-          <planeGeometry args={[0.4, 3.5]} />
-          <meshStandardMaterial color="#dfe3e8" />
+      {dashes.ns.map((d, i) => (
+        <mesh key={`n${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[d.x, 0.021, d.z]}>
+          <planeGeometry args={[0.15, 2]} />
+          <meshStandardMaterial color="#e9d27a" />
         </mesh>
       ))}
+      {ROADS_EW.flatMap((z) =>
+        ROADS_NS.map((x) => (
+          <group key={`x${x}-${z}`}>
+            {[-1.1, -0.4, 0.4, 1.1].map((o) => (
+              <mesh key={o} rotation={[-Math.PI / 2, 0, 0]} position={[x + o, 0.025, z]}>
+                <planeGeometry args={[0.35, ROAD_HALF * 2]} />
+                <meshStandardMaterial color="#f8fafc" />
+              </mesh>
+            ))}
+          </group>
+        )),
+      )}
+    </group>
+  )
+}
 
+function StreetDressing() {
+  const props = useMemo(() => {
+    const lights: { x: number; z: number }[] = []
+    const trees: { x: number; z: number }[] = []
+    const benches: { x: number; z: number }[] = []
+    for (const z of ROADS_EW) {
+      for (let x = WORLD.minX + 12; x < WORLD.maxX; x += 22) {
+        lights.push({ x, z: z + ROAD_HALF + 2.8 })
+        trees.push({ x: x + 6, z: z - ROAD_HALF - 3.2 })
+        benches.push({ x: x + 3, z: z + ROAD_HALF + 2.6 })
+      }
+    }
+    return { lights, trees, benches }
+  }, [])
+  const totalMinutes = useGame((s) => s.totalMinutes)
+  const night = dayPhase(stampFromMinutes(totalMinutes).minuteOfDay) !== 'day'
+  return (
+    <group>
+      {props.lights.map((l, i) => (
+        <Streetlight key={`l${i}`} position={[l.x, 0, l.z]} night={night} />
+      ))}
+      {props.trees.map((t, i) => (
+        <Tree key={`t${i}`} position={[t.x, 0, t.z]} />
+      ))}
+      {props.benches.map((b, i) => (
+        <Bench key={`b${i}`} position={[b.x, 0, b.z]} />
+      ))}
+      <Planter position={[POIS.fountain.x + 3, 0, POIS.fountain.z]} />
+      <Planter position={[POIS.fountain.x - 3, 0, POIS.fountain.z]} />
+      <Text position={[-28, 3.2, 8]} fontSize={0.45} color="#ecfccb" anchorX="center" rotation={[-0.2, 0.4, 0]}>
+        OAK WALK
+      </Text>
+      <Text position={[0, 4, -58]} fontSize={0.45} color="#e0f2fe" anchorX="center">
+        NORTH CAMPUS
+      </Text>
+      <Text position={[62, 3.4, 8]} fontSize={0.45} color="#ffedd5" anchorX="center">
+        EAST QUARTER
+      </Text>
+      <Text position={[-62, 3.4, 8]} fontSize={0.45} color="#dcfce7" anchorX="center">
+        WEST PARK
+      </Text>
+    </group>
+  )
+}
+
+function BackgroundBlocks() {
+  return (
+    <group>
+      {BACKGROUND.map((b) => (
+        <group key={b.id} position={[b.x, 0, b.z]}>
+          <mesh position={[0, b.h / 2, 0]} castShadow>
+            <boxGeometry args={[b.w, b.h, b.d]} />
+            <meshStandardMaterial color={b.color} />
+          </mesh>
+          <mesh position={[0, b.h * 0.55, b.d / 2 + 0.02]}>
+            <planeGeometry args={[b.w * 0.7, b.h * 0.45]} />
+            <meshStandardMaterial color={b.accent} emissive="#93c5fd" emissiveIntensity={0.15} />
+          </mesh>
+          <mesh position={[0, b.h + 0.2, 0]}>
+            <boxGeometry args={[b.w + 0.4, 0.35, b.d + 0.4]} />
+            <meshStandardMaterial color={b.accent} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  )
+}
+
+export function City() {
+  useEffect(() => {
+    setActiveBoxes(cityCollision())
+  }, [])
+
+  return (
+    <group>
+      <RoadGrid />
+      <StreetDressing />
       {BUILDINGS.map((b) => (
         <Building key={b.id} def={b} />
       ))}
-
-      {PARKED_CARS.map((c, i) => (
-        <Car
-          key={i}
-          position={[c.x, 0, c.z]}
-          rotation={c.rot === 0 ? 0 : Math.PI / 2}
-          color={c.color}
-        />
-      ))}
-
-      {streetProps.lights.map((l, i) => (
-        <Streetlight key={`l${i}`} position={[l.x, 0, l.z]} night={night} />
-      ))}
-      {streetProps.trees.map((t, i) => (
-        <Tree key={`t${i}`} position={[t.x, 0, t.z]} />
-      ))}
-      {streetProps.benches.map((b, i) => (
-        <Bench key={`bn${i}`} position={[b.x, 0, b.z]} rotation={b.rot} />
-      ))}
-      {streetProps.mailboxes.map((m, i) => (
-        <Mailbox key={`mb${i}`} position={[m.x, 0, m.z]} />
-      ))}
-      {streetProps.planters.map((p, i) => (
-        <Planter key={`pl${i}`} position={[p.x, 0, p.z]} />
-      ))}
-
-      <Pedestrian position={[-20, 0, 6.5]} range={14} speed={1.0} phase={0} shirt="#ef4444" skin="#d0996b" hair="#1a1a1a" />
-      <Pedestrian position={[14, 0, -6.6]} range={16} speed={0.8} phase={2} shirt="#22c55e" pants="#374151" skin="#c68642" />
-      <Pedestrian position={[36, 0, 6.4]} range={10} speed={1.2} phase={4} shirt="#eab308" pants="#3f3f46" skin="#8d5a3c" hair="#4a3728" />
-      <Pedestrian position={[-42, 0, -6.6]} range={12} speed={0.9} phase={1} shirt="#a855f7" skin="#e0ac69" />
-      <Pedestrian position={[6.5, 0, -20]} range={14} speed={1.05} phase={3} shirt="#38bdf8" axis="x" />
-      <Pedestrian position={[-6.5, 0, 18]} range={12} speed={0.85} phase={5} shirt="#f472b6" pants="#1f2937" skin="#5c3317" />
-      <Pedestrian position={[28, 0, 7.2]} range={9} speed={0.95} phase={1.5} shirt="#14b8a6" skin="#f1c27d" hair="#e8e0d5" />
-      <Pedestrian position={[-30, 0, -7.1]} range={11} speed={1.1} phase={2.7} shirt="#f97316" pants="#44403c" />
-      <Pedestrian position={[10, 0, 20]} range={8} speed={0.7} phase={0.4} shirt="#6366f1" axis="x" skin="#c9956b" />
-
-      <TrafficCar z={-2.0} speed={7} phase={0} color="#ef4444" />
-      <TrafficCar z={2.1} speed={5.5} phase={2.2} color="#3b82f6" />
-      <TrafficCar z={-2.0} speed={6.2} phase={4.5} color="#f8fafc" />
-      <TrafficCar z={2.1} speed={8} phase={1.1} color="#111827" />
-
-      {/* Ambient facade blocks for denser skyline (non-enterable) */}
-      {[
-        { x: -50, z: -28, w: 8, d: 7, h: 11, c: '#6b7280' },
-        { x: 42, z: -26, w: 9, d: 8, h: 14, c: '#4b5563' },
-        { x: -46, z: 28, w: 7, d: 6, h: 9, c: '#78716c' },
-        { x: 46, z: 26, w: 10, d: 8, h: 18, c: '#334155' },
-        { x: 0, z: -34, w: 12, d: 6, h: 8, c: '#a8a29e' },
-      ].map((b, i) => (
-        <mesh key={`facade-${i}`} position={[b.x, b.h / 2, b.z]} castShadow receiveShadow>
-          <boxGeometry args={[b.w, b.h, b.d]} />
-          <meshStandardMaterial color={b.c} roughness={0.75} metalness={0.08} />
-        </mesh>
-      ))}
-
+      <BackgroundBlocks />
+      <OutdoorLife />
+      <Traffic />
+      <HelpWanted />
       <DowntownDistrict />
       <DowntownTeaser />
-      <HelpWanted />
     </group>
   )
 }

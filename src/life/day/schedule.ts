@@ -88,7 +88,19 @@ export function minutesUntilPeriodEnd(totalMinutes: number): number {
   return Math.max(0, p.endMin - m)
 }
 
-export type BusinessId = 'bank' | 'grocery' | 'office' | 'cafe' | 'college' | 'automart'
+export type BusinessId =
+  | 'bank'
+  | 'grocery'
+  | 'office'
+  | 'cafe'
+  | 'college'
+  | 'automart'
+  | 'high'
+  | 'kitchen'
+  | 'lantern'
+  | 'clinic'
+  | 'workshop'
+  | 'commons'
 
 export function businessOpen(id: BusinessId, totalMinutes: number): boolean {
   const stamp = stampFromMinutes(totalMinutes)
@@ -100,6 +112,12 @@ export function businessOpen(id: BusinessId, totalMinutes: number): boolean {
   if (id === 'grocery') return h >= 7 && h < 22
   if (id === 'cafe') return h >= 7 && h < 20
   if (id === 'automart') return !weekend && h >= 9 && h < 19
+  if (id === 'high') return !weekend && h >= 7.5 && h < 15
+  if (id === 'kitchen') return h >= 11 && h < 22
+  if (id === 'lantern') return h >= 16 && h < 23
+  if (id === 'clinic') return !weekend && h >= 8 && h < 18
+  if (id === 'workshop') return h >= 8 && h < 18
+  if (id === 'commons') return h >= 9 && h < 21
   return true
 }
 
@@ -136,12 +154,12 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     hair: '#3b2f2f',
     route: [
       { from: 0, to: 8 * 60 + 5, at: { scene: 'city', x: 18, z: -18, label: 'walking in' } },
-      { from: 8 * 60 + 5, to: 9 * 60, at: { scene: 'college', x: -4.5, z: -3.2, yaw: 0, sit: true } },
-      { from: 9 * 60, to: 9 * 60 + 8, at: { scene: 'college', x: 0, z: 1.5 } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 4.2, z: -3.0, yaw: 0, sit: true } },
-      { from: 9 * 60 + 55, to: 10 * 60 + 55, at: { scene: 'college', x: -4.5, z: -3.2, sit: true } },
-      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'college', x: 5.5, z: 4.2, sit: true, label: 'lunch' } },
-      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'college', x: 4.2, z: -3.0, sit: true } },
+      { from: 8 * 60 + 5, to: 9 * 60, at: { scene: 'high', x: -4.5, z: -3.2, yaw: 0, sit: true } },
+      { from: 9 * 60, to: 9 * 60 + 8, at: { scene: 'high', x: 0, z: 1.5 } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 4.2, z: -3.0, yaw: 0, sit: true } },
+      { from: 9 * 60 + 55, to: 10 * 60 + 55, at: { scene: 'high', x: -4.5, z: -3.2, sit: true } },
+      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'high', x: 5.5, z: 4.2, sit: true, label: 'lunch' } },
+      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'high', x: 4.2, z: -3.0, sit: true } },
       { from: 12 * 60 + 35, to: 17 * 60, at: { scene: 'city', x: -16, z: 8, label: 'after school' } },
       { from: 17 * 60, to: 24 * 60, at: { scene: 'city', x: -34, z: -16 } },
     ],
@@ -161,11 +179,11 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     skin: '#8d5a3c',
     route: [
       { from: 0, to: 8 * 60 + 5, at: { scene: 'city', x: 20, z: -20 } },
-      { from: 8 * 60 + 5, to: 9 * 60, at: { scene: 'college', x: -3.2, z: -3.2, sit: true } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 5.4, z: -3.0, sit: true } },
-      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'college', x: -3.2, z: -3.2, sit: true } },
-      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'college', x: 4.2, z: 4.2, sit: true } },
-      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'college', x: 5.4, z: -3.0, sit: true } },
+      { from: 8 * 60 + 5, to: 9 * 60, at: { scene: 'high', x: -3.2, z: -3.2, sit: true } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 5.4, z: -3.0, sit: true } },
+      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'high', x: -3.2, z: -3.2, sit: true } },
+      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'high', x: 4.2, z: 4.2, sit: true } },
+      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'high', x: 5.4, z: -3.0, sit: true } },
       { from: 12 * 60 + 35, to: 18 * 60, at: { scene: 'city', x: -26, z: 18, label: 'FreshMart aisle' } },
       { from: 18 * 60, to: 24 * 60, at: { scene: 'city', x: 4, z: 12 } },
     ],
@@ -184,13 +202,13 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     pants: '#111827',
     hair: '#1a1a1a',
     route: [
-      { from: 0, to: 8 * 60, at: { scene: 'college', x: -5.5, z: -5.2 } },
-      { from: 8 * 60, to: 9 * 60, at: { scene: 'college', x: -5.5, z: -5.2, label: 'teaching A' } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 5.5, z: -5.0, label: 'teaching B' } },
-      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'college', x: -5.5, z: -5.2 } },
-      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'college', x: 2, z: 3.5, label: 'duty' } },
-      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'college', x: 5.5, z: -5.0 } },
-      { from: 12 * 60 + 35, to: 24 * 60, at: { scene: 'college', x: -6.5, z: 1.2, label: 'grading' } },
+      { from: 0, to: 8 * 60, at: { scene: 'high', x: -5.5, z: -5.2 } },
+      { from: 8 * 60, to: 9 * 60, at: { scene: 'high', x: -5.5, z: -5.2, label: 'teaching A' } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 5.5, z: -5.0, label: 'teaching B' } },
+      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'high', x: -5.5, z: -5.2 } },
+      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'high', x: 2, z: 3.5, label: 'duty' } },
+      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'high', x: 5.5, z: -5.0 } },
+      { from: 12 * 60 + 35, to: 24 * 60, at: { scene: 'high', x: -6.5, z: 1.2, label: 'grading' } },
     ],
     chatter: [
       'Sit down when the bell rings. Participation is optional — zoning out is also a choice with a cost.',
@@ -204,9 +222,9 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     shirt: '#14532d',
     pants: '#1f2937',
     route: [
-      { from: 0, to: 9 * 60 + 5, at: { scene: 'college', x: 5.5, z: -5.0 } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 5.5, z: -5.0 } },
-      { from: 10 * 60 + 5, to: 12 * 60 + 35, at: { scene: 'college', x: -5.5, z: -5.2 } },
+      { from: 0, to: 9 * 60 + 5, at: { scene: 'high', x: 5.5, z: -5.0 } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 5.5, z: -5.0 } },
+      { from: 10 * 60 + 5, to: 12 * 60 + 35, at: { scene: 'high', x: -5.5, z: -5.2 } },
       { from: 12 * 60 + 35, to: 24 * 60, at: { scene: 'city', x: 24, z: -18 } },
     ],
     chatter: ['Warm-up is on the board. Copy it even if you already know it.'],
@@ -218,11 +236,11 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     shirt: '#dc2626',
     pants: '#374151',
     route: [
-      { from: 8 * 60, to: 9 * 60, at: { scene: 'college', x: -2.0, z: -2.0, sit: true } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 3.0, z: -2.0, sit: true } },
-      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'college', x: -2.0, z: -2.0, sit: true } },
-      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'college', x: 6.5, z: 3.5, sit: true } },
-      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'college', x: 3.0, z: -2.0, sit: true } },
+      { from: 8 * 60, to: 9 * 60, at: { scene: 'high', x: -2.0, z: -2.0, sit: true } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 3.0, z: -2.0, sit: true } },
+      { from: 10 * 60 + 5, to: 10 * 60 + 55, at: { scene: 'high', x: -2.0, z: -2.0, sit: true } },
+      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'high', x: 6.5, z: 3.5, sit: true } },
+      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'high', x: 3.0, z: -2.0, sit: true } },
       { from: 12 * 60 + 35, to: 24 * 60, at: { scene: 'city', x: 10, z: 6 } },
     ],
     chatter: ['Did you finish the worksheet?'],
@@ -235,10 +253,10 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
     pants: '#4c1d95',
     hair: '#241a12',
     route: [
-      { from: 8 * 60, to: 9 * 60, at: { scene: 'college', x: -0.8, z: -2.0, sit: true } },
-      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'college', x: 2.0, z: -3.8, sit: true } },
-      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'college', x: 3.2, z: 5.0, sit: true } },
-      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'college', x: 2.0, z: -3.8, sit: true } },
+      { from: 8 * 60, to: 9 * 60, at: { scene: 'high', x: -0.8, z: -2.0, sit: true } },
+      { from: 9 * 60 + 8, to: 9 * 60 + 55, at: { scene: 'high', x: 2.0, z: -3.8, sit: true } },
+      { from: 10 * 60 + 55, to: 11 * 60 + 40, at: { scene: 'high', x: 3.2, z: 5.0, sit: true } },
+      { from: 11 * 60 + 45, to: 12 * 60 + 35, at: { scene: 'high', x: 2.0, z: -3.8, sit: true } },
       { from: 12 * 60 + 35, to: 24 * 60, at: { scene: 'city', x: -10, z: -8 } },
     ],
     chatter: ['Library after school if you want quiet.'],
@@ -248,7 +266,7 @@ export const CAMPUS_NPCS: LivingNpcDef[] = [
 export const CITY_WORKERS: LivingNpcDef[] = [
   {
     id: 'cafe-worker',
-    name: 'Devon',
+    name: 'Dev',
     role: 'worker',
     shirt: '#78350f',
     pants: '#292524',

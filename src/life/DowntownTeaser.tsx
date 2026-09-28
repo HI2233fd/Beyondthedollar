@@ -9,7 +9,7 @@ export function DowntownTeaser() {
   if (unlocked) return null
 
   return (
-    <group position={[48, 0, -8]}>
+    <group position={[0, 0, -90]}>
       <mesh position={[0, 3.2, 0]} castShadow>
         <boxGeometry args={[0.35, 6.4, 0.35]} />
         <meshStandardMaterial color="#334155" />

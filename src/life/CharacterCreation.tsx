@@ -3,17 +3,28 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { useGame } from '../GameState'
 import { LIFE_GOALS, type CharacterAppearance, type LifeGoalId } from './types'
-import { DEFAULT_LOOK, normalizeAppearance, type CharacterLook } from './characterLook'
+import { DEFAULT_LOOK, STYLE_CLOTHES, normalizeAppearance, type CharacterLook } from './characterLook'
 import { Humanoid } from '../Humanoid'
 
-const SKINS = ['#f1c27d', '#d0996b', '#c68642', '#8d5524', '#5c3317']
+const SKINS = ['#d6a47b', '#f1c27d', '#d0996b', '#c68642', '#8d5524', '#5c3317']
 const HAIRS = ['#241a12', '#4a3728', '#1a1a1a', '#6b4423', '#c4a574', '#e8e0d5']
-const SHIRTS = ['#2563eb', '#059669', '#dc2626', '#7c3aed', '#0f766e', '#ea580c']
+const SHIRTS = ['#527bc4', '#2563eb', '#059669', '#dc2626', '#7c3aed', '#0f766e', '#ea580c']
 const PANTS = ['#1f2937', '#334155', '#3f3f46', '#1e3a5f', '#44403c']
 const JACKETS = [null, '#1e293b', '#7f1d1d', '#14532d'] as (string | null)[]
 const FACES: CharacterLook['face'][] = ['soft', 'angular', 'round', 'oval']
 const BODIES: CharacterLook['body'][] = ['slim', 'average', 'athletic', 'plus']
-const HAIR_STYLES: CharacterLook['hairStyle'][] = ['short', 'medium', 'long', 'bun', 'fade']
+const HAIR_STYLES: { id: CharacterLook['hairStyle']; label: string }[] = [
+  { id: 'side-part', label: 'Side part' },
+  { id: 'buzz', label: 'Buzz cut' },
+  { id: 'long', label: 'Long' },
+  { id: 'buns', label: 'Buns' },
+]
+const STYLES: CharacterLook['style'][] = ['casual', 'athletic', 'professional']
+const HEIGHTS: { id: CharacterLook['height']; label: string }[] = [
+  { id: 'short', label: 'Short' },
+  { id: 'average', label: 'Average' },
+  { id: 'tall', label: 'Tall' },
+]
 const ACCESSORIES: CharacterLook['accessory'][] = ['none', 'glasses', 'hat', 'earrings']
 
 type Step = 'identity' | 'look' | 'goals'
@@ -103,31 +114,59 @@ export function CharacterCreation() {
               <p>Drag to rotate · {name || 'You'}</p>
             </div>
             <div className="create-swatches">
-              <SwatchRow label="Skin" values={SKINS} value={look.skin} onPick={(skin) => setLook((a) => ({ ...a, skin }))} />
-              <SwatchRow label="Hair" values={HAIRS} value={look.hair} onPick={(hair) => setLook((a) => ({ ...a, hair }))} />
-              <SwatchRow label="Shirt" values={SHIRTS} value={look.shirt} onPick={(shirt) => setLook((a) => ({ ...a, shirt }))} />
-              <SwatchRow label="Pants" values={PANTS} value={look.pants} onPick={(pants) => setLook((a) => ({ ...a, pants }))} />
-              <div className="create-chip-row">
-                <span>Style</span>
-                {HAIR_STYLES.map((f) => (
-                  <button key={f} type="button" className={look.hairStyle === f ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, hairStyle: f }))}>
-                    {f}
-                  </button>
-                ))}
-              </div>
-              <div className="create-chip-row">
-                <span>Face</span>
-                {FACES.map((f) => (
-                  <button key={f} type="button" className={look.face === f ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, face: f }))}>
-                    {f}
-                  </button>
-                ))}
-              </div>
               <div className="create-chip-row">
                 <span>Body</span>
                 {BODIES.map((b) => (
                   <button key={b} type="button" className={look.body === b ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, body: b }))}>
                     {b}
+                  </button>
+                ))}
+              </div>
+              <SwatchRow label="Skin tone" values={SKINS} value={look.skin} onPick={(skin) => setLook((a) => ({ ...a, skin }))} />
+              <div className="create-chip-row">
+                <span>Hairstyle</span>
+                {HAIR_STYLES.map((f) => (
+                  <button key={f.id} type="button" className={look.hairStyle === f.id ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, hairStyle: f.id }))}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+              <SwatchRow label="Hair color" values={HAIRS} value={look.hair} onPick={(hair) => setLook((a) => ({ ...a, hair }))} />
+              <SwatchRow label="Top color" values={SHIRTS} value={look.shirt} onPick={(shirt) => setLook((a) => ({ ...a, shirt }))} />
+              <div className="create-chip-row">
+                <span>Style</span>
+                {STYLES.map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    className={look.style === style ? 'chip active' : 'chip'}
+                    onClick={() =>
+                      setLook((a) => ({
+                        ...a,
+                        style,
+                        pants: STYLE_CLOTHES[style].pants,
+                        shoes: STYLE_CLOTHES[style].shoes,
+                      }))
+                    }
+                  >
+                    {style === 'casual' ? 'Casual' : style === 'athletic' ? 'Athletic' : 'Professional'}
+                  </button>
+                ))}
+              </div>
+              <div className="create-chip-row">
+                <span>Height</span>
+                {HEIGHTS.map((h) => (
+                  <button key={h.id} type="button" className={look.height === h.id ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, height: h.id }))}>
+                    {h.label}
+                  </button>
+                ))}
+              </div>
+              <SwatchRow label="Pants" values={PANTS} value={look.pants} onPick={(pants) => setLook((a) => ({ ...a, pants }))} />
+              <div className="create-chip-row">
+                <span>Face</span>
+                {FACES.map((f) => (
+                  <button key={f} type="button" className={look.face === f ? 'chip active' : 'chip'} onClick={() => setLook((a) => ({ ...a, face: f }))}>
+                    {f}
                   </button>
                 ))}
               </div>

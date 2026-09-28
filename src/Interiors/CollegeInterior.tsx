@@ -1,3 +1,4 @@
+import { Text } from '@react-three/drei'
 import { Room, InteriorExit } from './Room'
 import { NPC } from '../NPC'
 import { Chair, Plant, WallClock } from '../props'
@@ -186,7 +187,62 @@ function Locker() {
   )
 }
 
-/** Functional high-school campus: classrooms, hall, cafeteria, living NPCs. */
+function CollegeStations() {
+  useInteractable({
+    id: 'college-lecture',
+    scene: 'college',
+    position: [-5.5, 0, -5.2],
+    radius: 1.8,
+    prompt: 'Attend lecture',
+    onInteract: () => {
+      const period = periodAt(useGame.getState().totalMinutes)
+      useGame.getState().dayAct({ type: 'school-seat', seated: true })
+      if (period.kind === 'class') useGame.getState().openClassSession()
+      else if (period.conceptId) useGame.getState().openConcept(period.conceptId)
+      else useGame.getState().openDialogue({ name: 'Professor Ellis', text: 'No lecture is scheduled this hour. The learning lab still has the curriculum.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'college-assess',
+    scene: 'college',
+    position: [6, 0, -1],
+    radius: 1.8,
+    prompt: 'Complete assessment',
+    onInteract: () => useGame.getState().startCheckpoint(),
+  })
+  return (
+    <>
+      <NPC
+        id="prof-ellis"
+        scene="college"
+        position={[-6.2, 0, -5]}
+        name="Professor Ellis"
+        shirt="#1e3a5f"
+        pants="#111827"
+        getDialogue={() => ({
+          name: 'Professor Ellis',
+          text: 'Plan, practice, review. The lab opens the lesson you have unlocked. The assessment uses the checkpoint you have earned.',
+          options: [{ label: 'OK', close: true }],
+        })}
+      />
+      <NPC
+        id="student-noor"
+        scene="college"
+        position={[2, 0, 1]}
+        name="Noor"
+        shirt="#0ea5e9"
+        pants="#334155"
+        getDialogue={() => ({
+          name: 'Noor',
+          text: 'I am working the same unit. The lab will not skip a locked lesson.',
+          options: [{ label: 'OK', close: true }],
+        })}
+      />
+    </>
+  )
+}
+
+/** College hall: lessons, lecture, and assessment. High school periods also still run here. */
 export function CollegeInterior() {
   return (
     <Room
@@ -242,7 +298,11 @@ export function CollegeInterior() {
         getDialogue={counselorDialogue}
       />
 
-      <LearningStation buildingId="college" scene="college" position={[-7.2, 0, -4.5]} />
+      <Text position={[0, 3.2, -6.5]} fontSize={0.32} color="#7c2d12" anchorX="center" maxWidth={12}>
+        PLAN · PRACTICE · REVIEW
+      </Text>
+      <CollegeStations />
+      <LearningStation buildingId="college" scene="college" position={[-7.2, 0, -4.5]} prompt="Use the learning lab" />
       <LivingCrowd />
       <InteriorExit scene="college" />
     </Room>

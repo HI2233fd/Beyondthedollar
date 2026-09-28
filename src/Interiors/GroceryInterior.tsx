@@ -8,16 +8,31 @@ import { useInteractable } from '../InteractionSystem'
 import { LearningStation } from '../curriculum/LearningStation'
 import { GROCERY_PRODUCTS, type GroceryProduct } from '../life/play/logic'
 
-function ProductStand({ product, x, z }: { product: GroceryProduct; x: number; z: number }) {
+function ProductStand({ product, x, z, prompt }: { product: GroceryProduct; x: number; z: number; prompt?: string }) {
   const addToCart = useGame((s) => s.addToCart)
-  const kind = product.needKey ? 'food' : 'extra'
   useInteractable({
     id: `product-${product.id}`,
     scene: 'grocery',
     position: [x, 0, z],
     radius: 1.6,
-    prompt: `Add ${product.name} ($${product.price.toFixed(2)}, ${kind})`,
-    onInteract: () => addToCart({ id: product.id, name: product.name, price: product.price, needKey: product.needKey }),
+    prompt: prompt ?? browseLabel(product),
+    onInteract: () => {
+      const s = useGame.getState()
+      if (!s.worldSim.basket) {
+        s.openDialogue({ name: 'Rae', text: 'Take a shopping basket first. Nothing is charged until checkout.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      if (s.cart.some((c) => c.id === product.id)) {
+        s.openDialogue({ name: 'Rae', text: `${product.name} is already in the basket.`, options: [{ label: 'OK', close: true }] })
+        return
+      }
+      addToCart({ id: product.id, name: product.name, price: product.price, needKey: product.needKey })
+      s.openDialogue({
+        name: 'Basket',
+        text: `Added ${product.name} ($${product.price.toFixed(2)}). You are not charged until checkout.`,
+        options: [{ label: 'OK', close: true }],
+      })
+    },
   })
   return (
     <group position={[x, 0, z]}>
@@ -39,6 +54,65 @@ function ProductStand({ product, x, z }: { product: GroceryProduct; x: number; z
   )
 }
 
+function browseLabel(product: GroceryProduct) {
+  const shelf = product.shelf.toLowerCase()
+  if (shelf.includes('dairy')) return 'Browse dairy'
+  if (shelf.includes('dry') || shelf.includes('bakery')) return 'Browse grains'
+  if (shelf.includes('meat')) return 'Browse proteins'
+  if (shelf.includes('home')) return 'Browse household essentials'
+  if (shelf.includes('frozen')) return 'Browse frozen'
+  if (shelf.includes('produce')) return 'Browse produce'
+  return 'Browse snacks'
+}
+
+const EXTRA_AISLE: GroceryProduct[] = [
+  { id: 'apples', name: 'Apples', price: 1.79, color: '#ef4444', needKey: null, shelf: 'Produce' },
+  { id: 'greens', name: 'Greens', price: 2.29, color: '#22c55e', needKey: null, shelf: 'Produce' },
+  { id: 'peas', name: 'Frozen peas', price: 2.49, color: '#86efac', needKey: null, shelf: 'Frozen' },
+  { id: 'soap', name: 'Dish soap', price: 3.19, color: '#38bdf8', needKey: null, shelf: 'Home' },
+]
+
+function BasketStand() {
+  useInteractable({
+    id: 'grocery-basket',
+    scene: 'grocery',
+    position: [-4.4, 0, 5.2],
+    radius: 2,
+    prompt: 'Take a shopping basket',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (s.worldSim.basket) {
+        const lines = s.cart.map((c) => `${c.name} $${c.price.toFixed(2)}`).join('\n') || 'Empty.'
+        s.openDialogue({ name: 'Basket', text: `Already carrying one.\n${lines}`, options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.patchWorld({ basket: true })
+      s.openDialogue({ name: 'Basket', text: 'Basket in hand. Shelves will not charge you until checkout.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  return null
+}
+
+function NeighborPickup() {
+  useInteractable({
+    id: 'grocery-neighbor',
+    scene: 'grocery',
+    position: [6, 0, 4],
+    radius: 1.8,
+    prompt: 'Collect a neighbor’s order',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (s.worldSim.neighborOrder !== 'ready') {
+        s.openDialogue({ name: 'Rae', text: 'No prepaid bag is on the shelf.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.patchWorld({ neighborOrder: 'carrying' })
+      s.openDialogue({ name: 'Rae', text: 'Prepaid order is bagged. No charge. Drop it at the family home mail spot.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  return null
+}
+
 function Checkout() {
   const openDialogue = useGame((s) => s.openDialogue)
   useInteractable({
@@ -51,7 +125,7 @@ function Checkout() {
       const s = useGame.getState()
       if (s.cart.length === 0) {
         openDialogue({
-          name: 'Cashier — Priya',
+          name: 'Rae',
           text: 'Your cart is empty! Grab a few items off the shelves, then come back to check out.',
           options: [{ label: 'Okay', close: true }],
         })
@@ -60,9 +134,10 @@ function Checkout() {
       const total = s.cart.reduce((a, i) => a + i.price, 0)
       const pay = (from: 'cash' | 'bank') => {
         const paid = useGame.getState().checkout(from)
+        if (paid >= 0) useGame.getState().patchWorld({ basket: false })
         const now = useGame.getState()
         openDialogue({
-          name: 'Cashier — Priya',
+          name: 'Rae',
           text:
             paid < 0
               ? 'That account cannot cover the cart. Nothing was charged.'
@@ -71,7 +146,7 @@ function Checkout() {
         })
       }
       openDialogue({
-        name: 'Cashier — Priya',
+          name: 'Rae',
         text: `Cart is $${total.toFixed(2)}. Cash $${s.cash.toFixed(2)}. Checking $${s.bank.toFixed(2)}. I will not tell you if it is a good basket.`,
         options: [
           { label: `Pay cash`, action: () => pay('cash') },
@@ -182,6 +257,11 @@ export function GroceryInterior() {
       {GROCERY_PRODUCTS.map((p, i) => (
         <ProductStand key={p.id} product={p} x={-6 + (i % 6) * 2.4} z={i < 6 ? -1 : -4.2} />
       ))}
+      {EXTRA_AISLE.map((p, i) => (
+        <ProductStand key={p.id} product={p} x={-2 + i * 1.8} z={2.2} />
+      ))}
+      <BasketStand />
+      <NeighborPickup />
 
       {/* Shoppers */}
       <Guest position={[3, 0, 1]} rotation={Math.PI} shirt="#0ea5e9" pants="#374151" />
@@ -195,12 +275,12 @@ export function GroceryInterior() {
         scene="grocery"
         position={[-6, 0, 5]}
         rotation={Math.PI}
-        name="Priya"
+        name="Rae"
         shirt="#16a34a"
         pants="#14532d"
         skin="#c68642"
         getDialogue={() => ({
-          name: 'Cashier — Priya',
+          name: 'Rae',
           text: 'Shelves are labeled. Food and extras are mixed together. Pay at the register when you are done — cash or checking.',
           options: [{ label: 'Thanks', close: true }],
         })}

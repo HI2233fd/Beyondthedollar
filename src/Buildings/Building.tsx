@@ -2,6 +2,7 @@ import { Billboard, Text } from '@react-three/drei'
 import { useGame } from '../GameState'
 import { useInteractable } from '../InteractionSystem'
 import { doorPosition, type BuildingDef } from '../cityLayout'
+import type { BusinessId } from '../life/day/schedule'
 import { INTERIOR_SPAWN } from '../Interiors/spawns'
 import { buildingHasActiveCurriculum } from '../curriculum'
 import type { BuildingId } from '../curriculum/types'
@@ -68,15 +69,21 @@ export function Building({ def }: { def: BuildingDef }) {
         </mesh>
       ))}
 
-      {/* Roof cap + slight overhang */}
       <mesh position={[def.x, def.h + 0.15, def.z]}>
         <boxGeometry args={[def.w + 0.55, 0.3, def.d + 0.55]} />
-        <meshStandardMaterial color="#2b3444" roughness={0.9} />
+        <meshStandardMaterial color={def.accent ?? '#2b3444'} roughness={0.9} />
       </mesh>
-      <mesh position={[def.x, def.h + 0.38, def.z]}>
-        <boxGeometry args={[def.w * 0.55, 0.2, def.d * 0.45]} />
-        <meshStandardMaterial color="#1e293b" metalness={0.2} roughness={0.7} />
-      </mesh>
+      {def.roof === 'gable' || def.roof === 'shed' ? (
+        <mesh position={[def.x, def.h + 0.9, def.z]} rotation={[0, 0, def.roof === 'shed' ? 0.15 : 0]}>
+          <boxGeometry args={[def.w, 0.8, def.d]} />
+          <meshStandardMaterial color={def.accent ?? '#1e293b'} />
+        </mesh>
+      ) : (
+        <mesh position={[def.x, def.h + 0.45, def.z]}>
+          <boxGeometry args={[def.w * 0.55, def.roof === 'step' ? 1.2 : 0.35, def.d * 0.45]} />
+          <meshStandardMaterial color="#1e293b" />
+        </mesh>
+      )}
 
       {/* Awning over entrance */}
       {def.enterable && (
@@ -188,11 +195,7 @@ export function Building({ def }: { def: BuildingDef }) {
         <DoorTrigger
           def={def}
           onEnter={() =>
-            tryEnter(
-              def.scene!,
-              INTERIOR_SPAWN[def.scene as keyof typeof INTERIOR_SPAWN],
-              def.id === 'cafe' ? 'cafe' : def.id === 'college' ? 'college' : (def.scene as 'bank' | 'grocery' | 'office' | 'cafe' | 'college'),
-            )
+            tryEnter(def.scene!, INTERIOR_SPAWN[def.scene as keyof typeof INTERIOR_SPAWN], HOURS[def.id])
           }
         />
       )}
@@ -200,12 +203,27 @@ export function Building({ def }: { def: BuildingDef }) {
   )
 }
 
+const HOURS: Partial<Record<string, BusinessId>> = {
+  bank: 'bank',
+  grocery: 'grocery',
+  office: 'office',
+  cafe: 'cafe',
+  college: 'college',
+  high: 'high',
+  motors: 'automart',
+  kitchen: 'kitchen',
+  lantern: 'lantern',
+  clinic: 'clinic',
+  workshop: 'workshop',
+  commons: 'commons',
+}
+
 function DoorTrigger({ def, onEnter }: { def: BuildingDef; onEnter: () => void }) {
   const door = doorPosition(def)
   useInteractable({
     scene: 'city',
     position: [door[0], 0, door[2] + def.facing * 1.8],
-    radius: 5,
+    radius: 2.8,
     prompt: `Enter ${def.name}`,
     onInteract: onEnter,
     id: `door-${def.id}`,

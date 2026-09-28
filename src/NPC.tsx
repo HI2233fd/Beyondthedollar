@@ -1,4 +1,3 @@
-import { Billboard, Text } from '@react-three/drei'
 import { Humanoid } from './Humanoid'
 import { useGame, type Dialogue, type SceneId } from './GameState'
 import { useInteractable } from './InteractionSystem'
@@ -49,11 +48,6 @@ export function NPC({
   return (
     <group position={position} rotation={[0, rotation, 0]}>
       <Humanoid shirt={shirt} pants={pants} skin={skin} hair={hair} />
-      <Billboard position={[0, 2.35, 0]}>
-        <Text fontSize={0.28} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.012} outlineColor="#0b0f19">
-          {name}
-        </Text>
-      </Billboard>
     </group>
   )
 }

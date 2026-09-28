@@ -69,6 +69,10 @@ export interface SaveBlob {
   lifeFacts?: LifeFacts
   /** Absent on saves from before the living-world day loop. */
   dayLife?: DayLife
+  /** Bellwether world progress. Absent on older saves. */
+  worldSim?: import('../world/worldSim').WorldSim
+  /** Custom key labels. Absent means the default WASD layout. */
+  bindings?: Partial<import('../world/bindings').ControlBindings>
   messages?: PhoneMessage[]
   guideDismissed?: string[]
   leftHome?: boolean

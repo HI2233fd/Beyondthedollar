@@ -4,7 +4,7 @@ import type { CharacterAppearance, LifeGoalId, Mission, NpcRelation, Season, Ski
 export interface CharacterLook {
   skin: string
   hair: string
-  hairStyle: 'short' | 'medium' | 'long' | 'bun' | 'fade'
+  hairStyle: 'side-part' | 'buzz' | 'long' | 'buns' | 'short' | 'medium' | 'bun' | 'fade'
   shirt: string
   pants: string
   shoes: string
@@ -14,21 +14,42 @@ export interface CharacterLook {
   brow: 'soft' | 'strong' | 'arched'
   body: 'slim' | 'average' | 'athletic' | 'plus'
   accessory: 'none' | 'glasses' | 'hat' | 'earrings'
+  style: 'casual' | 'athletic' | 'professional'
+  height: 'short' | 'average' | 'tall'
 }
 
+export const STYLE_CLOTHES = {
+  casual: { pants: '#334b65', shoes: '#e4e1d7' },
+  athletic: { pants: '#283c43', shoes: '#e4e1d7' },
+  professional: { pants: '#343843', shoes: '#39312b' },
+} as const
+
 export const DEFAULT_LOOK: CharacterLook = {
-  skin: '#d0996b',
-  hair: '#241a12',
-  hairStyle: 'short',
-  shirt: '#2563eb',
-  pants: '#1f2937',
-  shoes: '#111827',
+  skin: '#d6a47b',
+  hair: '#30241e',
+  hairStyle: 'side-part',
+  shirt: '#527bc4',
+  pants: '#334b65',
+  shoes: '#e4e1d7',
   jacket: null,
   face: 'soft',
   eyeColor: '#2c1810',
   brow: 'soft',
   body: 'average',
   accessory: 'none',
+  style: 'casual',
+  height: 'average',
+}
+
+const HAIR_ALIASES: Record<string, CharacterLook['hairStyle']> = {
+  short: 'side-part',
+  medium: 'side-part',
+  fade: 'buzz',
+  bun: 'buns',
+  'side-part': 'side-part',
+  buzz: 'buzz',
+  long: 'long',
+  buns: 'buns',
 }
 
 /** Normalize any saved appearance blob into CharacterLook. */
@@ -39,7 +60,7 @@ export function normalizeAppearance(raw: Partial<CharacterAppearance & Character
     ...base,
     skin: raw.skin ?? base.skin,
     hair: raw.hair ?? base.hair,
-    hairStyle: (raw as CharacterLook).hairStyle ?? base.hairStyle,
+    hairStyle: HAIR_ALIASES[(raw as CharacterLook).hairStyle ?? ''] ?? base.hairStyle,
     shirt: raw.shirt ?? base.shirt,
     pants: raw.pants ?? base.pants,
     shoes: (raw as CharacterLook).shoes ?? base.shoes,
@@ -49,6 +70,8 @@ export function normalizeAppearance(raw: Partial<CharacterAppearance & Character
     brow: (raw as CharacterLook).brow ?? base.brow,
     body: (raw.body as CharacterLook['body']) ?? base.body,
     accessory: (raw as CharacterLook).accessory ?? base.accessory,
+    style: (raw as CharacterLook).style ?? (raw.body === 'athletic' ? 'athletic' : base.style),
+    height: (raw as CharacterLook).height ?? base.height,
   }
 }
 

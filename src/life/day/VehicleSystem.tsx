@@ -60,8 +60,9 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
 
     const target = throttle * 11
     speed.current += (target - speed.current) * Math.min(1, dt * 2.2)
+    if (pressed.has('Space')) speed.current *= Math.max(0, 1 - dt * 4)
     if (Math.abs(speed.current) > 0.4) {
-      yaw.current += steer * dt * 1.6 * Math.sign(speed.current)
+      yaw.current += steer * dt * 1.6 * Math.sign(speed.current || 1)
     }
     const dx = Math.sin(yaw.current) * speed.current * dt
     const dz = Math.cos(yaw.current) * speed.current * dt
@@ -76,7 +77,8 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
       mesh.current.rotation.y = yaw.current
     }
 
-    if (consumeInteract()) {
+    if (consumeInteract() && Math.abs(speed.current) < 1.2) {
+      const side = yaw.current + Math.PI / 2
       dayAct({
         type: 'park-vehicle',
         vehicleId: vehicle.id,
@@ -84,6 +86,8 @@ function DrivingController({ vehicle }: { vehicle: OwnedVehicle }) {
         z: g.position.z,
         yaw: yaw.current,
       })
+      g.position.x += Math.sin(side) * 2.4
+      g.position.z += Math.cos(side) * 2.4
     }
   })
 

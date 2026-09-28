@@ -12,10 +12,12 @@ export function LearningStation({
   buildingId,
   scene,
   position,
+  prompt,
 }: {
   buildingId: BuildingId
   scene: SceneId
   position: [number, number, number]
+  prompt?: string
 }) {
   const openLesson = useGame((s) => s.openLesson)
   const unlocked = useGame((s) => s.unlockedUnitNumber)
@@ -28,7 +30,7 @@ export function LearningStation({
     scene,
     position,
     radius: 2.4,
-    prompt: active ? 'Start lesson' : 'Lessons complete here',
+    prompt: prompt ?? (active ? 'Start lesson' : 'Lessons complete here'),
     onInteract: () => {
       if (next) openLesson(next.topic.lesson.id)
     },

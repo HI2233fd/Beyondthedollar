@@ -19,7 +19,7 @@ function CafeCounter() {
     scene: 'cafe',
     position: [-1.2, 0, -2.2],
     radius: 2.2,
-    prompt: 'Order at the counter',
+    prompt: 'Talk to Dev',
     onInteract: () => {
       if (!businessOpen('cafe', totalMinutes)) {
         openDialogue({ name: 'Bean Street', text: 'Closed. Come back in the morning.', options: [{ label: 'OK', close: true }] })
@@ -91,6 +91,65 @@ function CafeSeat({ id, x, z }: { id: string; x: number; z: number }) {
   return <Chair position={[x, 0, z]} rotation={Math.PI} color="#44403c" />
 }
 
+function CafeShift() {
+  const need = (step: number) => useGame.getState().worldSim.cafeStep >= step
+  useInteractable({
+    id: 'cafe-ticket',
+    scene: 'cafe',
+    position: [1.2, 0, -2.2],
+    radius: 1.6,
+    prompt: 'Read the customer ticket',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (s.lifeFacts.employerId !== 'bean' || !s.hasJob) {
+        s.openDialogue({ name: 'Dev', text: 'That ticket is for staff. Talk to Dev if you want the job.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.patchWorld({ cafeStep: Math.max(s.worldSim.cafeStep, 1) })
+      s.openDialogue({ name: 'Ticket', text: 'Oat latte, extra hot, for the window table.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'cafe-prep',
+    scene: 'cafe',
+    position: [-3.2, 0, -1],
+    radius: 1.6,
+    prompt: 'Prepare the coffee',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (!need(1)) {
+        s.openDialogue({ name: 'Dev', text: 'Read the ticket first.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.patchWorld({ cafeStep: Math.max(s.worldSim.cafeStep, 2) })
+      s.openDialogue({ name: 'Espresso machine', text: 'Drink is ready. Serve the waiting customer.', options: [{ label: 'OK', close: true }] })
+    },
+  })
+  useInteractable({
+    id: 'cafe-serve',
+    scene: 'cafe',
+    position: [2.2, 0, 1.2],
+    radius: 1.6,
+    prompt: 'Serve the waiting customer',
+    onInteract: () => {
+      const s = useGame.getState()
+      if (!need(2)) {
+        s.openDialogue({ name: 'Dev', text: 'Prepare the drink before you serve it.', options: [{ label: 'OK', close: true }] })
+        return
+      }
+      s.patchWorld({ cafeStep: 0 })
+      const err = s.play({ type: 'shift', employerId: 'bean', accuracy: 1 })
+      if (err) s.openDialogue({ name: 'Dev', text: err, options: [{ label: 'OK', close: true }] })
+    },
+  })
+  return (
+    <mesh position={[-3.2, 0.9, -1]} castShadow>
+      <boxGeometry args={[0.8, 0.7, 0.6]} />
+      <meshStandardMaterial color="#44403c" metalness={0.4} />
+    </mesh>
+  )
+}
+
 export function CafeInterior() {
   return (
     <Room w={12} d={10} floor="#d6c7b0" wall="#f5efe6">
@@ -104,6 +163,7 @@ export function CafeInterior() {
         <boxGeometry args={[3.2, 0.9, 0.08]} />
         <meshStandardMaterial color="#fef3c7" />
       </mesh>
+      <CafeShift />
       <LivingCrowd />
       <InteriorExit scene="cafe" />
     </Room>

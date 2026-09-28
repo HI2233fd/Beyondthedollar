@@ -1,28 +1,42 @@
 import { useGame } from './GameState'
+import { DEFAULT_BINDINGS, type ControlBindings } from './world/bindings'
+import { useWorldUi } from './world/simStore'
 
 export const pressed = new Set<string>()
 
 let initialized = false
 let interactQueued = false
 
+export { DEFAULT_BINDINGS }
+
+export function binding(name: keyof ControlBindings): string {
+  return useWorldUi.getState().bindings[name] || DEFAULT_BINDINGS[name]
+}
+
+function typingTarget(target: EventTarget | null) {
+  const el = target as HTMLElement | null
+  if (!el) return false
+  const tag = el.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || !!el.isContentEditable
+}
+
 export function initControls() {
   if (initialized) return
   initialized = true
 
   window.addEventListener('keydown', (e) => {
-    // Avoid page scrolling with space/arrows
+    if (typingTarget(e.target)) return
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
       e.preventDefault()
     }
     pressed.add(e.code)
-    // Queue interaction on the keydown edge so a fast tap can never be
-    // dropped between animation frames (ignore auto-repeat).
-    if (e.code === 'KeyE' && !e.repeat) {
-      interactQueued = true
-    }
+    if (e.code === binding('interact') && !e.repeat) interactQueued = true
     if (e.code === 'Escape') {
       const g = useGame.getState()
-      if (g.optionsOpen) g.closeOptions()
+      const ui = useWorldUi.getState()
+      if (ui.mapOpen) ui.setMap(false)
+      else if (ui.calendarOpen) ui.setCalendar(false)
+      else if (g.optionsOpen) g.closeOptions()
       else if (g.rewardPopup) g.clearRewardPopup()
       else if (g.classSessionOpen) g.closeClassSession()
       else if (g.phoneOpen) g.closePhone()
@@ -30,8 +44,11 @@ export function initControls() {
       else if (g.activeScenarioId) g.dismissScenario()
       else if (g.activeQuizId) g.closeQuiz()
       else if (g.activeLessonId) g.closeLesson()
+      else if (g.checkpointOpen) g.closeCheckpoint()
+      else if (g.activeConceptId) g.closeConcept()
       else if (g.dayLife?.sittingId) g.dayAct({ type: 'sit', seatId: null })
-      else g.closeDialogue()
+      else if (g.dialogue) g.closeDialogue()
+      else if (!document.pointerLockElement) g.openOptions()
     }
   })
 
@@ -39,11 +56,9 @@ export function initControls() {
     pressed.delete(e.code)
   })
 
-  // Clear keys if window loses focus so player doesn't "run away"
   window.addEventListener('blur', () => pressed.clear())
 }
 
-/** Returns true once per E keypress, then clears the queued flag. */
 export function consumeInteract(): boolean {
   if (interactQueued) {
     interactQueued = false
@@ -54,6 +69,7 @@ export function consumeInteract(): boolean {
 
 export function movementLocked(): boolean {
   const s = useGame.getState()
+  const ui = useWorldUi.getState()
   return (
     !!s.dialogue ||
     s.transitioning ||
@@ -68,8 +84,12 @@ export function movementLocked(): boolean {
     !!s.rewardPopup ||
     !!s.activity ||
     !!s.classSessionOpen ||
+    s.checkpointOpen ||
+    !!s.activeConceptId ||
     !!s.dayLife?.drivingVehicleId ||
     !!s.dayLife?.sittingId ||
-    !s.characterCreated
+    !s.characterCreated ||
+    ui.mapOpen ||
+    ui.calendarOpen
   )
 }
